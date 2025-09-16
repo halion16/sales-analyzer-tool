@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizzatore Vendite - Funzionante</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-section {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .file-upload input[type=file] {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .debug {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .control-group label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .control-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .rank-1 { background-color: #ffd700; font-weight: bold; }
+        .rank-2 { background-color: #c0c0c0; font-weight: bold; }
+        .rank-3 { background-color: #cd7f32; color: white; font-weight: bold; }
+        .currency { text-align: right; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Analizzatore Vendite - Test Funzionante</h1>
+
+        <div class="upload-section">
+            <h3>Carica CSV</h3>
+            <input type="file" id="csvFile" accept=".csv" />
+        </div>
+
+        <div id="debug" class="debug"></div>
+
+        <div id="controls" class="controls hidden">
+            <div class="control-group">
+                <label>Percentuale Provvigione (%)</label>
+                <input type="number" id="commissionRate" value="0.78" step="0.01" />
+            </div>
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button class="btn" onclick="processData()">Calcola</button>
+            </div>
+        </div>
+
+        <div id="results" class="hidden">
+            <h2>Risultati</h2>
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Pos.</th>
+                        <th>Operatore</th>
+                        <th>Venduto (€)</th>
+                        <th>Provvigione (€)</th>
+                        <th>Transazioni</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let parsedData = [];
+
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const text = event.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseCSV(text) {
+            const debug = document.getElementById('debug');
+            const lines = text.split('\n');
+
+            let debugOutput = `File caricato: ${lines.length} righe\n\n`;
+
+            // Show first line
+            debugOutput += `Prima riga (header):\n"${lines[0]}"\n\n`;
+
+            // Show first few data lines
+            debugOutput += `Prime 3 righe dati:\n`;
+            for (let i = 1; i <= Math.min(3, lines.length - 1); i++) {
+                debugOutput += `Riga ${i}: "${lines[i]}"\n`;
+            }
+            debugOutput += '\n';
+
+            rawData = [];
+
+            // Try to detect separator
+            const firstDataLine = lines[1] || '';
+            let separator = '';
+
+            if (firstDataLine.includes(';')) {
+                separator = ';';
+                debugOutput += 'Separatore rilevato: punto e virgola (;)\n';
+            } else if (firstDataLine.includes('\t')) {
+                separator = '\t';
+                debugOutput += 'Separatore rilevato: tab\n';
+            } else {
+                separator = 'spaces';
+                debugOutput += 'Separatore rilevato: spazi multipli\n';
+            }
+
+            // Parse header
+            let headers = [];
+            if (separator === 'spaces') {
+                headers = lines[0].split(/\s+/).filter(h => h.trim());
+            } else {
+                headers = lines[0].split(separator).map(h => h.trim());
+            }
+
+            debugOutput += `Colonne trovate (${headers.length}):\n`;
+            headers.forEach((h, i) => {
+                debugOutput += `[${i}] "${h}"\n`;
+            });
+            debugOutput += '\n';
+
+            // Find column indices
+            const operatoreIndex = headers.findIndex(h =>
+                h.toUpperCase().includes('OPERATORE') || h.toUpperCase() === 'OPERATORE'
+            );
+            const valNettoIndex = headers.findIndex(h =>
+                h.toUpperCase().includes('VAL.NETTO') || h.toUpperCase().includes('NETTO')
+            );
+            const codDepIndex = headers.findIndex(h =>
+                h.toUpperCase().includes('COD.DEP') || h.toUpperCase() === 'COD.DEP'
+            );
+
+            debugOutput += `Indici colonne:\n`;
+            debugOutput += `OPERATORE: ${operatoreIndex} ("${headers[operatoreIndex] || 'NON TROVATO'}")\n`;
+            debugOutput += `VAL.NETTO: ${valNettoIndex} ("${headers[valNettoIndex] || 'NON TROVATO'}")\n`;
+            debugOutput += `COD.DEP: ${codDepIndex} ("${headers[codDepIndex] || 'NON TROVATO'}")\n\n`;
+
+            if (operatoreIndex === -1 || valNettoIndex === -1) {
+                debugOutput += '❌ ERRORE: Colonne OPERATORE o VAL.NETTO non trovate!\n';
+                debug.textContent = debugOutput;
+                return;
+            }
+
+            // Parse data
+            let validRows = 0;
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                let columns = [];
+                if (separator === 'spaces') {
+                    columns = line.split(/\s+/).filter(c => c.trim());
+                } else {
+                    columns = line.split(separator).map(c => c.trim());
+                }
+
+                if (columns.length <= Math.max(operatoreIndex, valNettoIndex)) continue;
+
+                const operatore = columns[operatoreIndex];
+                const valNettoStr = columns[valNettoIndex];
+                const codDep = codDepIndex >= 0 ? columns[codDepIndex] : 'N/A';
+
+                if (!operatore || !valNettoStr) continue;
+
+                // Parse amount
+                let amount = 0;
+                const cleanAmount = valNettoStr.replace(',', '.');
+                amount = parseFloat(cleanAmount) || 0;
+
+                if (amount > 0) {
+                    rawData.push({
+                        operatore: operatore,
+                        amount: amount,
+                        codDep: codDep
+                    });
+                    validRows++;
+                }
+            }
+
+            debugOutput += `✅ Parsing completato:\n`;
+            debugOutput += `Righe valide: ${validRows}\n`;
+            debugOutput += `Record totali: ${rawData.length}\n\n`;
+
+            // Test Monica Pavan
+            const monicaRecords = rawData.filter(r =>
+                r.operatore.toUpperCase().includes('MONICA') &&
+                r.operatore.toUpperCase().includes('PAVAN')
+            );
+
+            if (monicaRecords.length > 0) {
+                const monicaTotal = monicaRecords.reduce((sum, r) => sum + r.amount, 0);
+                debugOutput += `🔍 TEST MONICA PAVAN:\n`;
+                debugOutput += `Transazioni: ${monicaRecords.length}\n`;
+                debugOutput += `Venduto totale: €${monicaTotal.toLocaleString('it-IT', {minimumFractionDigits: 2})}\n`;
+                debugOutput += `Provvigioni (0.78%): €${(monicaTotal * 0.0078).toLocaleString('it-IT', {minimumFractionDigits: 2})}\n`;
+            }
+
+            debug.textContent = debugOutput;
+
+            if (rawData.length > 0) {
+                document.getElementById('controls').classList.remove('hidden');
+            }
+        }
+
+        function processData() {
+            if (rawData.length === 0) return;
+
+            const commissionRate = parseFloat(document.getElementById('commissionRate').value) / 100;
+
+            // Group by operator
+            const operatorTotals = {};
+
+            rawData.forEach(record => {
+                if (!operatorTotals[record.operatore]) {
+                    operatorTotals[record.operatore] = {
+                        operatore: record.operatore,
+                        totalSales: 0,
+                        transactions: 0
+                    };
+                }
+                operatorTotals[record.operatore].totalSales += record.amount;
+                operatorTotals[record.operatore].transactions += 1;
+            });
+
+            // Calculate commissions and sort
+            parsedData = Object.values(operatorTotals)
+                .map(op => ({
+                    ...op,
+                    commission: op.totalSales * commissionRate
+                }))
+                .sort((a, b) => b.commission - a.commission);
+
+            // Render results
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+
+            parsedData.forEach((op, index) => {
+                const row = document.createElement('tr');
+
+                let rowClass = '';
+                let position = index + 1;
+                if (index === 0) rowClass = 'rank-1';
+                else if (index === 1) rowClass = 'rank-2';
+                else if (index === 2) rowClass = 'rank-3';
+
+                row.className = rowClass;
+                row.innerHTML = `
+                    <td>${position}°</td>
+                    <td><strong>${op.operatore}</strong></td>
+                    <td class="currency">${op.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                    <td class="currency">${op.commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                    <td>${op.transactions}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('results').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

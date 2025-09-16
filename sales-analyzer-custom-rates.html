@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizzatore Vendite - Percentuali Personalizzate</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 3px solid #4CAF50;
+            margin: 20px 0;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .tab:hover:not(.active) {
+            background: #e8f5e8;
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .upload-section {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .file-upload input[type=file] {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .debug {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Custom Rates Table */
+        .rates-section {
+            margin: 30px 0;
+        }
+        .rates-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .rates-controls input, .rates-controls select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .rates-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .rates-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .rates-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .rates-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .rates-table input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            text-align: center;
+        }
+        .rates-table input[type="number"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+        .custom-rate {
+            background: #fff3cd !important;
+            border-left: 4px solid #ffc107 !important;
+        }
+
+        .shop-configured {
+            background: #d4edda !important;
+            border-left: 4px solid #28a745 !important;
+        }
+        .shop-unconfigured {
+            background: #f8d7da !important;
+            border-left: 4px solid #dc3545 !important;
+        }
+        .shop-found-in-csv {
+            background: #d1ecf1 !important;
+            border-left: 4px solid #17a2b8 !important;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status-configured {
+            background: #28a745;
+            color: white;
+        }
+        .status-unconfigured {
+            background: #dc3545;
+            color: white;
+        }
+        .status-found {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .control-group label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-expand {
+            background: #2196F3;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 10px;
+        }
+
+        /* Stats Cards */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        /* Pivot Table - Same as before */
+        .pivot-container {
+            margin: 30px 0;
+        }
+        .shop-row {
+            background: #f8f9ff;
+            border: 2px solid #e1e7ff;
+            border-radius: 8px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .shop-header {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
+            transition: background 0.3s ease;
+        }
+        .shop-header:hover {
+            background: linear-gradient(135deg, #e8f0ff, #dde7ff);
+        }
+        .shop-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .shop-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c5aa0;
+        }
+        .shop-summary {
+            font-size: 14px;
+            color: #666;
+        }
+        .shop-metrics {
+            display: flex;
+            gap: 30px;
+            text-align: center;
+        }
+        .shop-metric {
+            display: flex;
+            flex-direction: column;
+        }
+        .shop-metric-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .shop-metric-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .expand-icon {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+            color: #4CAF50;
+        }
+        .shop-row.expanded .expand-icon {
+            transform: rotate(90deg);
+        }
+
+        /* Operators Table */
+        .operators-table {
+            display: none;
+            background: white;
+            border-top: 1px solid #e1e7ff;
+        }
+        .shop-row.expanded .operators-table {
+            display: block;
+        }
+        .operators-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .operators-table th {
+            background: #5a67d8;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .operators-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .operators-table tr:hover td {
+            background-color: #f8f9fa;
+        }
+
+        /* Operator Rankings */
+        .operator-rank-1 {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 237, 78, 0.3)) !important;
+            border-left: 4px solid #ffd700 !important;
+            font-weight: bold;
+        }
+        .operator-rank-2 {
+            background: linear-gradient(135deg, rgba(192, 192, 192, 0.3), rgba(211, 211, 211, 0.3)) !important;
+            border-left: 4px solid #c0c0c0 !important;
+            font-weight: bold;
+        }
+        .operator-rank-3 {
+            background: linear-gradient(135deg, rgba(205, 127, 50, 0.3), rgba(228, 155, 80, 0.3)) !important;
+            border-left: 4px solid #cd7f32 !important;
+            font-weight: bold;
+        }
+
+        .currency {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        .percentage {
+            text-align: right;
+            color: #2196F3;
+            font-family: 'Courier New', monospace;
+        }
+        .text-center { text-align: center; }
+        .hidden { display: none; }
+
+        /* Search */
+        .search-bar {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .search-bar select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .shop-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .shop-metrics {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .tabs {
+                flex-direction: column;
+            }
+            .tab {
+                margin-right: 0;
+                margin-bottom: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Analizzatore Vendite - Percentuali Personalizzate</h1>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('upload')">📁 Caricamento</div>
+            <div class="tab" onclick="showTab('shops')">🏪 Negozi</div>
+            <div class="tab" onclick="showTab('rates')">⚙️ Percentuali Custom</div>
+            <div class="tab" onclick="showTab('results')">📊 Risultati</div>
+        </div>
+
+        <!-- Tab 1: Upload -->
+        <div id="tab-upload" class="tab-content active">
+            <div class="upload-section">
+                <h3>Carica CSV</h3>
+                <input type="file" id="csvFile" accept=".csv" />
+            </div>
+            <div id="debug" class="debug"></div>
+        </div>
+
+        <!-- Tab 2: Shops -->
+        <div id="tab-shops" class="tab-content">
+            <div class="rates-section">
+                <h2>🏪 Configurazione Negozi</h2>
+
+                <div class="rates-controls">
+                    <button class="btn" onclick="loadDefaultShops()">📋 Carica Lista Default</button>
+                    <button class="btn btn-secondary" onclick="clearAllShops()">🗑️ Pulisci Tutto</button>
+                    <button class="btn" onclick="saveShops()">💾 Salva Configurazione</button>
+                </div>
+
+                <div class="rates-controls">
+                    <label>🔍 Cerca Negozio:</label>
+                    <input type="text" id="shopSearch" placeholder="Codice o nome..." style="flex: 1;" />
+
+                    <label>Mostra:</label>
+                    <select id="shopDisplayFilter">
+                        <option value="all">Tutti i negozi</option>
+                        <option value="configured">Solo configurati</option>
+                        <option value="unconfigured">Solo da configurare</option>
+                        <option value="found">Solo trovati nel CSV</option>
+                    </select>
+
+                    <button class="btn btn-secondary" onclick="clearShopFilters()">🗑️ Pulisci Filtri</button>
+                </div>
+
+                <div id="shopsTableContainer" class="rates-table-container hidden">
+                    <table class="rates-table">
+                        <thead>
+                            <tr>
+                                <th>🏷️ Codice</th>
+                                <th>🏪 Nome Negozio</th>
+                                <th>📊 Venduto CSV</th>
+                                <th>👥 Operatori</th>
+                                <th>📍 Status</th>
+                                <th>🗑️ Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shopsTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div id="noShopDataMessage" class="text-center" style="padding: 40px; color: #666;">
+                    Carica prima un file CSV per configurare i negozi
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Custom Rates -->
+        <div id="tab-rates" class="tab-content">
+            <div class="rates-section">
+                <h2>⚙️ Configura Percentuali Personalizzate</h2>
+
+                <div class="rates-controls">
+                    <label>Percentuale Default:</label>
+                    <input type="number" id="defaultRate" value="0.78" step="0.01" min="0" max="100" />
+                    <span>%</span>
+
+                    <button class="btn btn-secondary" onclick="applyDefaultToAll()">📄 Applica Default a Tutti</button>
+                    <button class="btn btn-secondary" onclick="resetCustomRates()">🔄 Reset</button>
+                    <button class="btn" onclick="saveRates()">💾 Salva Configurazione</button>
+                </div>
+
+                <div class="rates-controls">
+                    <label>🔍 Cerca Dipendente:</label>
+                    <input type="text" id="employeeSearch" placeholder="Nome dipendente..." style="flex: 1;" />
+
+                    <label>Filtra per Negozio:</label>
+                    <select id="employeeShopFilter" style="min-width: 150px;">
+                        <option value="">Tutti i negozi</option>
+                    </select>
+
+                    <label>Mostra solo:</label>
+                    <select id="ratesFilter">
+                        <option value="all">Tutti</option>
+                        <option value="custom">Solo % Personalizzate</option>
+                        <option value="default">Solo % Default</option>
+                    </select>
+
+                    <button class="btn btn-secondary" onclick="clearFilters()">🗑️ Pulisci Filtri</button>
+                </div>
+
+                <div id="ratesTableContainer" class="rates-table-container hidden">
+                    <table class="rates-table">
+                        <thead>
+                            <tr>
+                                <th>👤 Operatore</th>
+                                <th>🏪 Negozio</th>
+                                <th>💰 Venduto Totale (€)</th>
+                                <th>⚙️ % Personalizzata</th>
+                                <th>🏆 Provvigioni con Default</th>
+                                <th>🏆 Provvigioni Custom</th>
+                                <th>📊 Differenza</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ratesTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div id="noDataMessage" class="text-center" style="padding: 40px; color: #666;">
+                    Carica prima un file CSV per configurare le percentuali personalizzate
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Results -->
+        <div id="tab-results" class="tab-content">
+            <div id="controls" class="controls hidden">
+                <div class="control-group">
+                    <label>Modalità Calcolo</label>
+                    <select id="calculationMode">
+                        <option value="default">Percentuale Default</option>
+                        <option value="custom">Percentuali Personalizzate</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Filtra per Negozio</label>
+                    <select id="shopFilter">
+                        <option value="">Tutti i negozi</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button class="btn" onclick="processData()">🔄 Calcola Risultati</button>
+                </div>
+            </div>
+
+            <div id="results" class="hidden">
+                <div class="stats" id="stats"></div>
+
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="🔍 Cerca negozio o operatore..." />
+                    <select id="sortSelect">
+                        <option value="commission">Ordina per Provvigioni</option>
+                        <option value="sales">Ordina per Vendite</option>
+                        <option value="operators">Ordina per N° Operatori</option>
+                        <option value="name">Ordina per Nome</option>
+                    </select>
+                    <button class="btn-expand" onclick="toggleAllShops()">📖 Espandi Tutto</button>
+                </div>
+
+                <div class="pivot-container" id="pivotContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let pivotData = [];
+        let customRates = {};
+        let shopNames = {};
+        let shopTotalsForMapping = {};
+        let allExpanded = false;
+        let operatorTotals = {};
+
+        // Default shop names (from user's list)
+        const defaultShopNames = {
+            '002': 'MARZOCCA',
+            '008': 'VALMONTONE',
+            '0012': 'ANTEGNATE',
+            '0038': 'FRANCIACORTA',
+            '0059': 'MILANO',
+            '0040': 'MOLFETTA',
+            '0043': 'MANTOVA',
+            '0044': 'PESCARA',
+            '0046': 'NOVENTA',
+            '0049': 'CASTELGUELFO',
+            '0050': 'CASTELROMANO',
+            '0053': 'VALDICHIANA',
+            '0057': 'BRUGNATO',
+            '0061': 'MONDOVI',
+            '0063': 'MARCIANISE',
+            '0064': 'ENNA',
+            '0066': 'BARBERINO',
+            '0067': 'TORINO',
+            '0069': 'ORIO',
+            '0003': 'JESI'
+        };
+
+        // Load saved rates from localStorage
+        function loadSavedRates() {
+            const saved = localStorage.getItem('customCommissionRates');
+            if (saved) {
+                customRates = JSON.parse(saved);
+            }
+        }
+
+        // Load saved shop names from localStorage
+        function loadSavedShopNames() {
+            const saved = localStorage.getItem('shopNames');
+            if (saved) {
+                shopNames = JSON.parse(saved);
+            }
+        }
+
+        // Save rates to localStorage
+        function saveRates() {
+            localStorage.setItem('customCommissionRates', JSON.stringify(customRates));
+            alert('✅ Configurazione salvata con successo!');
+        }
+
+        // Save shop names to localStorage
+        function saveShops() {
+            localStorage.setItem('shopNames', JSON.stringify(shopNames));
+            alert('✅ Configurazione negozi salvata con successo!');
+        }
+
+        // Load default shop names
+        function loadDefaultShops() {
+            if (confirm('Caricare la lista default dei negozi? Questo sovrascriverà le configurazioni attuali.')) {
+                shopNames = { ...defaultShopNames };
+                buildShopsTable();
+            }
+        }
+
+        // Clear all shop names
+        function clearAllShops() {
+            if (confirm('Cancellare tutti i nomi dei negozi configurati?')) {
+                shopNames = {};
+                buildShopsTable();
+            }
+        }
+
+        // Build shops table
+        function buildShopsTable() {
+            const container = document.getElementById('shopsTableContainer');
+            const tbody = document.getElementById('shopsTableBody');
+            const noDataMessage = document.getElementById('noShopDataMessage');
+
+            // Check if we have CSV data
+            if (rawData.length === 0) {
+                container.classList.add('hidden');
+                noDataMessage.classList.remove('hidden');
+                return;
+            }
+
+            // Get unique shops from CSV data
+            const shopsInCSV = {};
+            rawData.forEach(record => {
+                const shop = record.codDep;
+                if (!shopsInCSV[shop]) {
+                    shopsInCSV[shop] = {
+                        code: shop,
+                        totalSales: 0,
+                        operatorCount: new Set(),
+                        transactions: 0
+                    };
+                }
+                shopsInCSV[shop].totalSales += record.amount;
+                shopsInCSV[shop].operatorCount.add(record.operatore);
+                shopsInCSV[shop].transactions += 1;
+            });
+
+            // Convert operator sets to counts
+            Object.values(shopsInCSV).forEach(shop => {
+                shop.operatorCount = shop.operatorCount.size;
+            });
+
+            // Combine with all known shops (from defaults and saved)
+            const allShops = {};
+
+            // Add shops from CSV
+            Object.values(shopsInCSV).forEach(shop => {
+                allShops[shop.code] = shop;
+            });
+
+            // Add shops from default list that aren't in CSV
+            Object.keys(defaultShopNames).forEach(code => {
+                if (!allShops[code]) {
+                    allShops[code] = {
+                        code: code,
+                        totalSales: 0,
+                        operatorCount: 0,
+                        transactions: 0
+                    };
+                }
+            });
+
+            // Add shops from saved configuration that aren't elsewhere
+            Object.keys(shopNames).forEach(code => {
+                if (!allShops[code]) {
+                    allShops[code] = {
+                        code: code,
+                        totalSales: 0,
+                        operatorCount: 0,
+                        transactions: 0
+                    };
+                }
+            });
+
+            container.classList.remove('hidden');
+            noDataMessage.classList.add('hidden');
+
+            // Sort shops by code
+            const sortedShops = Object.values(allShops).sort((a, b) => a.code.localeCompare(b.code));
+
+            tbody.innerHTML = '';
+
+            sortedShops.forEach(shop => {
+                const configuredName = shopNames[shop.code] || '';
+                const defaultName = defaultShopNames[shop.code] || '';
+                const foundInCSV = shop.totalSales > 0;
+
+                let statusClass = '';
+                let statusText = '';
+                let statusBadgeClass = '';
+
+                if (configuredName) {
+                    statusClass = 'shop-configured';
+                    statusText = 'Configurato';
+                    statusBadgeClass = 'status-configured';
+                } else if (foundInCSV) {
+                    statusClass = 'shop-found-in-csv';
+                    statusText = 'Trovato nel CSV';
+                    statusBadgeClass = 'status-found';
+                } else {
+                    statusClass = 'shop-unconfigured';
+                    statusText = 'Da configurare';
+                    statusBadgeClass = 'status-unconfigured';
+                }
+
+                const row = document.createElement('tr');
+                row.className = statusClass;
+                row.innerHTML = `
+                    <td><strong>${shop.code}</strong></td>
+                    <td>
+                        <input type="text"
+                               value="${configuredName || defaultName}"
+                               placeholder="${defaultName || 'Inserisci nome...'}"
+                               onchange="updateShopName('${shop.code}', this.value)"
+                               style="width: 200px; padding: 5px; border: 1px solid #ddd; border-radius: 3px;" />
+                    </td>
+                    <td class="currency">
+                        ${foundInCSV ? '€' + shop.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2}) : '-'}
+                    </td>
+                    <td class="text-center">
+                        ${foundInCSV ? shop.operatorCount : '-'}
+                    </td>
+                    <td class="text-center">
+                        <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+                    </td>
+                    <td class="text-center">
+                        ${configuredName || (foundInCSV && defaultName) ?
+                            `<button onclick="deleteShop('${shop.code}')"
+                                    style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                                    title="Elimina negozio dalla configurazione">
+                                🗑️ Elimina
+                             </button>` :
+                            '<span style="color: #999;">-</span>'
+                        }
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter shops table
+        function filterShopsTable() {
+            const searchTerm = document.getElementById('shopSearch').value.toLowerCase();
+            const displayFilter = document.getElementById('shopDisplayFilter').value;
+
+            const tbody = document.getElementById('shopsTableBody');
+            const rows = tbody.querySelectorAll('tr');
+
+            let visibleRows = 0;
+
+            rows.forEach(row => {
+                const shopCode = row.cells[0].textContent.toLowerCase();
+                const shopNameInput = row.cells[1].querySelector('input');
+                const shopName = shopNameInput.value.toLowerCase();
+                const hasStatusClass = row.classList.contains('shop-configured') ||
+                                     row.classList.contains('shop-found-in-csv') ||
+                                     row.classList.contains('shop-unconfigured');
+
+                // Check search term
+                const matchesSearch = searchTerm === '' ||
+                                    shopCode.includes(searchTerm) ||
+                                    shopName.includes(searchTerm);
+
+                // Check display filter
+                let matchesFilter = true;
+                if (displayFilter === 'configured') {
+                    matchesFilter = row.classList.contains('shop-configured');
+                } else if (displayFilter === 'unconfigured') {
+                    matchesFilter = row.classList.contains('shop-unconfigured');
+                } else if (displayFilter === 'found') {
+                    matchesFilter = row.classList.contains('shop-found-in-csv');
+                }
+
+                if (matchesSearch && matchesFilter) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Show/hide "no results" message for shops table
+            const container = document.getElementById('shopsTableContainer');
+            let noResultsMsg = container.querySelector('.no-shop-results-message');
+
+            if (visibleRows === 0 && rows.length > 0) {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('div');
+                    noResultsMsg.className = 'no-shop-results-message';
+                    noResultsMsg.style.cssText = 'text-align: center; padding: 40px; color: #666; font-style: italic;';
+                    noResultsMsg.innerHTML = '🔍 Nessun negozio trovato con i filtri attuali';
+                    container.appendChild(noResultsMsg);
+                }
+                noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
+            }
+        }
+
+        // Clear shop filters
+        function clearShopFilters() {
+            document.getElementById('shopSearch').value = '';
+            document.getElementById('shopDisplayFilter').value = 'all';
+            filterShopsTable();
+        }
+
+        // Update shop name
+        function updateShopName(shopCode, newName) {
+            if (newName.trim()) {
+                shopNames[shopCode] = newName.trim();
+            } else {
+                delete shopNames[shopCode];
+            }
+            // Rebuild to update status
+            buildShopsTable();
+        }
+
+        // Get display name for shop
+        function getShopDisplayName(shopCode) {
+            const name = shopNames[shopCode] || defaultShopNames[shopCode];
+            return name ? `${shopCode}-${name}` : `Negozio ${shopCode}`;
+        }
+
+        // Delete shop from configuration
+        function deleteShop(shopCode) {
+            if (confirm(`Eliminare il negozio ${shopCode} dalla configurazione?\n\nQuesto rimuoverà solo la configurazione del nome, non i dati delle vendite.`)) {
+                delete shopNames[shopCode];
+                buildShopsTable();
+
+                // Show confirmation message
+                const container = document.getElementById('shopsTableContainer');
+                const message = document.createElement('div');
+                message.style.cssText = 'background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center;';
+                message.innerHTML = `✅ Negozio ${shopCode} rimosso dalla configurazione`;
+                container.parentNode.insertBefore(message, container);
+
+                setTimeout(() => {
+                    message.remove();
+                }, 3000);
+            }
+        }
+
+        // Load saved data on page load
+        loadSavedRates();
+        loadSavedShopNames();
+
+        // Tab functionality
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // File upload
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const text = event.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file);
+        });
+
+        // Search and sort functionality
+        document.getElementById('searchInput').addEventListener('input', filterPivotTable);
+        document.getElementById('sortSelect').addEventListener('change', sortPivotTable);
+
+        // Employee search and filter functionality
+        document.getElementById('employeeSearch').addEventListener('input', filterRatesTable);
+        document.getElementById('employeeShopFilter').addEventListener('change', filterRatesTable);
+        document.getElementById('ratesFilter').addEventListener('change', filterRatesTable);
+
+        // Shop search and filter functionality
+        document.getElementById('shopSearch').addEventListener('input', filterShopsTable);
+        document.getElementById('shopDisplayFilter').addEventListener('change', filterShopsTable);
+
+        function parseCSV(text) {
+            const debug = document.getElementById('debug');
+            const lines = text.split('\n');
+
+            let debugOutput = `File caricato: ${lines.length} righe\n\n`;
+
+            rawData = [];
+
+            // Same parsing logic as working version
+            const firstDataLine = lines[1] || '';
+            let separator = '';
+
+            if (firstDataLine.includes(';')) {
+                separator = ';';
+                debugOutput += 'Separatore rilevato: punto e virgola (;)\n';
+            } else if (firstDataLine.includes('\t')) {
+                separator = '\t';
+                debugOutput += 'Separatore rilevato: tab\n';
+            } else {
+                separator = 'spaces';
+                debugOutput += 'Separatore rilevato: spazi multipli\n';
+            }
+
+            // Parse header
+            let headers = [];
+            if (separator === 'spaces') {
+                headers = lines[0].split(/\s+/).filter(h => h.trim());
+            } else {
+                headers = lines[0].split(separator).map(h => h.trim());
+            }
+
+            // Find column indices
+            const operatoreIndex = headers.findIndex(h =>
+                h.toUpperCase().includes('OPERATORE') || h.toUpperCase() === 'OPERATORE'
+            );
+            const valNettoIndex = headers.findIndex(h =>
+                h.toUpperCase().includes('VAL.NETTO') || h.toUpperCase().includes('NETTO')
+            );
+            const codDepIndex = headers.findIndex(h =>
+                h.toUpperCase().includes('COD.DEP') || h.toUpperCase() === 'COD.DEP'
+            );
+
+            debugOutput += `Indici colonne:\n`;
+            debugOutput += `OPERATORE: ${operatoreIndex} ("${headers[operatoreIndex] || 'NON TROVATO'}")\n`;
+            debugOutput += `VAL.NETTO: ${valNettoIndex} ("${headers[valNettoIndex] || 'NON TROVATO'}")\n`;
+            debugOutput += `COD.DEP: ${codDepIndex} ("${headers[codDepIndex] || 'NON TROVATO'}")\n\n`;
+
+            if (operatoreIndex === -1 || valNettoIndex === -1) {
+                debugOutput += '❌ ERRORE: Colonne OPERATORE o VAL.NETTO non trovate!\n';
+                debug.textContent = debugOutput;
+                return;
+            }
+
+            // Parse data
+            let validRows = 0;
+            const shops = new Set();
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                let columns = [];
+                if (separator === 'spaces') {
+                    columns = line.split(/\s+/).filter(c => c.trim());
+                } else {
+                    columns = line.split(separator).map(c => c.trim());
+                }
+
+                if (columns.length <= Math.max(operatoreIndex, valNettoIndex)) continue;
+
+                const operatore = columns[operatoreIndex];
+                const valNettoStr = columns[valNettoIndex];
+                const codDep = codDepIndex >= 0 ? columns[codDepIndex] : 'N/A';
+
+                if (!operatore || !valNettoStr) continue;
+
+                // Parse amount
+                let amount = 0;
+                const cleanAmount = valNettoStr.replace(',', '.');
+                amount = parseFloat(cleanAmount) || 0;
+
+                if (amount > 0) {
+                    rawData.push({
+                        operatore: operatore,
+                        amount: amount,
+                        codDep: codDep
+                    });
+                    shops.add(codDep);
+                    validRows++;
+                }
+            }
+
+            debugOutput += `✅ Parsing completato: ${validRows} righe valide\n`;
+
+            debug.textContent = debugOutput;
+
+            if (rawData.length > 0) {
+                // Calculate operator totals for rates table
+                calculateOperatorTotals();
+
+                // Populate shop filter
+                const shopFilter = document.getElementById('shopFilter');
+                shopFilter.innerHTML = '<option value="">Tutti i negozi</option>';
+                Array.from(shops).sort().forEach(shop => {
+                    const displayName = getShopDisplayName(shop);
+                    shopFilter.innerHTML += `<option value="${shop}">${displayName}</option>`;
+                });
+
+                // Populate employee shop filter
+                const employeeShopFilter = document.getElementById('employeeShopFilter');
+                employeeShopFilter.innerHTML = '<option value="">Tutti i negozi</option>';
+                Array.from(shops).sort().forEach(shop => {
+                    const displayName = getShopDisplayName(shop);
+                    employeeShopFilter.innerHTML += `<option value="${shop}">${displayName}</option>`;
+                });
+
+                // Build shops table with loaded data
+                buildShopsTable();
+
+                // Show controls and rates table
+                document.getElementById('controls').classList.remove('hidden');
+                buildRatesTable();
+
+                // Auto-switch to shops tab first
+                showTab('shops');
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.querySelector('.tab:nth-child(1)').classList.remove('active');
+            }
+        }
+
+        function calculateOperatorTotals() {
+            operatorTotals = {};
+
+            rawData.forEach(record => {
+                if (!operatorTotals[record.operatore]) {
+                    operatorTotals[record.operatore] = {
+                        operatore: record.operatore,
+                        codDep: record.codDep,
+                        totalSales: 0,
+                        transactions: 0
+                    };
+                }
+                operatorTotals[record.operatore].totalSales += record.amount;
+                operatorTotals[record.operatore].transactions += 1;
+            });
+        }
+
+        function buildRatesTable() {
+            const container = document.getElementById('ratesTableContainer');
+            const tbody = document.getElementById('ratesTableBody');
+            const noDataMessage = document.getElementById('noDataMessage');
+
+            if (Object.keys(operatorTotals).length === 0) {
+                container.classList.add('hidden');
+                noDataMessage.classList.remove('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            noDataMessage.classList.add('hidden');
+
+            const defaultRate = parseFloat(document.getElementById('defaultRate').value) / 100;
+
+            // Sort operators by total sales
+            const sortedOperators = Object.values(operatorTotals).sort((a, b) => b.totalSales - a.totalSales);
+
+            tbody.innerHTML = '';
+
+            sortedOperators.forEach(operator => {
+                const customRate = customRates[operator.operatore] || defaultRate;
+                const defaultCommission = operator.totalSales * defaultRate;
+                const customCommission = operator.totalSales * customRate;
+                const difference = customCommission - defaultCommission;
+
+                const row = document.createElement('tr');
+                if (customRates[operator.operatore]) {
+                    row.classList.add('custom-rate');
+                }
+
+                const shopDisplayName = getShopDisplayName(operator.codDep);
+                row.innerHTML = `
+                    <td><strong>${operator.operatore}</strong></td>
+                    <td>${shopDisplayName}</td>
+                    <td class="currency">€${operator.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                    <td class="text-center">
+                        <input type="number" value="${(customRate * 100).toFixed(2)}"
+                               step="0.01" min="0" max="100"
+                               onchange="updateCustomRate('${operator.operatore}', this.value)"
+                               style="width: 70px;" />%
+                    </td>
+                    <td class="currency">€${defaultCommission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                    <td class="currency">€${customCommission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                    <td class="currency" style="color: ${difference >= 0 ? '#28a745' : '#dc3545'};">
+                        ${difference >= 0 ? '+' : ''}€${difference.toLocaleString('it-IT', {minimumFractionDigits: 2})}
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateCustomRate(operatore, newRate) {
+            const rate = parseFloat(newRate) / 100;
+            if (rate >= 0) {
+                customRates[operatore] = rate;
+                buildRatesTable(); // Rebuild to update calculations
+            }
+        }
+
+        function applyDefaultToAll() {
+            if (confirm('Applicare la percentuale default a tutti gli operatori?')) {
+                customRates = {};
+                buildRatesTable();
+            }
+        }
+
+        function resetCustomRates() {
+            if (confirm('Cancellare tutte le percentuali personalizzate?')) {
+                customRates = {};
+                localStorage.removeItem('customCommissionRates');
+                buildRatesTable();
+            }
+        }
+
+        function processData() {
+            if (rawData.length === 0) return;
+
+            const calculationMode = document.getElementById('calculationMode').value;
+            const defaultRate = parseFloat(document.getElementById('defaultRate').value) / 100;
+            const shopFilter = document.getElementById('shopFilter').value;
+
+            // Filter data if needed
+            let filteredData = rawData;
+            if (shopFilter) {
+                filteredData = rawData.filter(r => r.codDep === shopFilter);
+            }
+
+            // Group by shop and operator
+            const shopOperatorGroups = {};
+            const shopTotals = {};
+
+            filteredData.forEach(record => {
+                const shopKey = record.codDep;
+                const operatorKey = `${record.codDep}|${record.operatore}`;
+
+                // Shop totals
+                if (!shopTotals[shopKey]) {
+                    shopTotals[shopKey] = {
+                        shop: shopKey,
+                        totalSales: 0,
+                        operators: new Set(),
+                        transactions: 0
+                    };
+                }
+                shopTotals[shopKey].totalSales += record.amount;
+                shopTotals[shopKey].operators.add(record.operatore);
+                shopTotals[shopKey].transactions += 1;
+
+                // Shop-Operator combinations
+                if (!shopOperatorGroups[operatorKey]) {
+                    shopOperatorGroups[operatorKey] = {
+                        shop: record.codDep,
+                        operatore: record.operatore,
+                        totalSales: 0,
+                        transactions: 0
+                    };
+                }
+                shopOperatorGroups[operatorKey].totalSales += record.amount;
+                shopOperatorGroups[operatorKey].transactions += 1;
+            });
+
+            // Process pivot data with custom rates
+            pivotData = [];
+            Object.values(shopTotals).forEach(shop => {
+                shop.operatorCount = shop.operators.size;
+
+                // Get operators for this shop
+                const shopOperators = Object.values(shopOperatorGroups)
+                    .filter(item => item.shop === shop.shop)
+                    .map(op => {
+                        // Use custom rate if available, otherwise default
+                        const rate = calculationMode === 'custom' && customRates[op.operatore] ?
+                                   customRates[op.operatore] : defaultRate;
+
+                        return {
+                            ...op,
+                            rate: rate,
+                            commission: op.totalSales * rate,
+                            percentageInShop: (op.totalSales / shop.totalSales) * 100,
+                            isCustomRate: calculationMode === 'custom' && customRates[op.operatore] !== undefined
+                        };
+                    })
+                    .sort((a, b) => b.commission - a.commission);
+
+                // Calculate shop totals
+                shop.commission = shopOperators.reduce((sum, op) => sum + op.commission, 0);
+                shop.avgPerOperator = shop.operatorCount > 0 ? shop.commission / shop.operatorCount : 0;
+                shop.operators = shopOperators;
+                pivotData.push(shop);
+            });
+
+            // Sort shops by commission
+            pivotData.sort((a, b) => b.commission - a.commission);
+
+            renderResults();
+        }
+
+        function renderResults() {
+            renderStats();
+            renderPivotTable();
+            document.getElementById('results').classList.remove('hidden');
+
+            // Auto-switch to results tab
+            showTab('results');
+            document.querySelector('.tab:nth-child(3)').classList.add('active');
+            document.querySelectorAll('.tab').forEach((tab, index) => {
+                if (index !== 2) tab.classList.remove('active');
+            });
+        }
+
+        function renderStats() {
+            const totalSales = pivotData.reduce((sum, shop) => sum + shop.totalSales, 0);
+            const totalCommission = pivotData.reduce((sum, shop) => sum + shop.commission, 0);
+            const totalOperators = pivotData.reduce((sum, shop) => sum + shop.operatorCount, 0);
+            const totalShops = pivotData.length;
+
+            const calculationMode = document.getElementById('calculationMode').value;
+            const modeText = calculationMode === 'custom' ? 'Personalizzate' : 'Default';
+
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalShops}</div>
+                    <div>Negozi</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${totalOperators}</div>
+                    <div>Operatori</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">€${totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                    <div>Venduto Totale</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">€${totalCommission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                    <div>Provvigioni ${modeText}</div>
+                </div>
+            `;
+        }
+
+        function renderPivotTable() {
+            const container = document.getElementById('pivotContainer');
+
+            if (pivotData.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">Nessun dato disponibile</p>';
+                return;
+            }
+
+            let html = '';
+
+            pivotData.forEach((shop, shopIndex) => {
+                const shopDisplayName = getShopDisplayName(shop.shop);
+                html += `
+                    <div class="shop-row" data-shop="${shop.shop}" data-shop-name="${shopDisplayName.toLowerCase()}">
+                        <div class="shop-header" onclick="toggleShop(${shopIndex})">
+                            <div class="shop-info">
+                                <div class="shop-name">🏪 ${shopDisplayName}</div>
+                                <div class="shop-summary">
+                                    ${shop.operatorCount} operatori • ${shop.transactions} transazioni
+                                </div>
+                            </div>
+                            <div class="shop-metrics">
+                                <div class="shop-metric">
+                                    <div class="shop-metric-value">€${shop.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                    <div class="shop-metric-label">Venduto</div>
+                                </div>
+                                <div class="shop-metric">
+                                    <div class="shop-metric-value">€${shop.commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                    <div class="shop-metric-label">Provvigioni</div>
+                                </div>
+                                <div class="shop-metric">
+                                    <div class="shop-metric-value">€${shop.avgPerOperator.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                    <div class="shop-metric-label">Media Operatore</div>
+                                </div>
+                                <div class="expand-icon">▶</div>
+                            </div>
+                        </div>
+                        <div class="operators-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: center;">Pos.</th>
+                                        <th>👤 Operatore</th>
+                                        <th>⚙️ % Rate</th>
+                                        <th>💰 Venduto (€)</th>
+                                        <th>🏆 Provvigione (€)</th>
+                                        <th>📊 % nel Negozio</th>
+                                        <th>🔢 Transazioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                shop.operators.forEach((operator, index) => {
+                    let rowClass = '';
+                    let position = '';
+
+                    if (index === 0) {
+                        rowClass = 'operator-rank-1';
+                        position = '🥇';
+                    } else if (index === 1) {
+                        rowClass = 'operator-rank-2';
+                        position = '🥈';
+                    } else if (index === 2) {
+                        rowClass = 'operator-rank-3';
+                        position = '🥉';
+                    } else {
+                        position = `${index + 1}°`;
+                    }
+
+                    if (operator.isCustomRate) {
+                        rowClass += ' custom-rate';
+                    }
+
+                    const rateDisplay = operator.isCustomRate ?
+                        `<strong>${(operator.rate * 100).toFixed(2)}%</strong> ⚙️` :
+                        `${(operator.rate * 100).toFixed(2)}%`;
+
+                    html += `
+                        <tr class="${rowClass}">
+                            <td class="text-center"><strong>${position}</strong></td>
+                            <td><strong>${operator.operatore}</strong></td>
+                            <td class="text-center">${rateDisplay}</td>
+                            <td class="currency">${operator.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="currency">${operator.commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="percentage">${operator.percentageInShop.toFixed(2)}%</td>
+                            <td class="text-center">${operator.transactions}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleShop(shopIndex) {
+            const shopRow = document.querySelectorAll('.shop-row')[shopIndex];
+            const isExpanded = shopRow.classList.contains('expanded');
+
+            if (isExpanded) {
+                shopRow.classList.remove('expanded');
+            } else {
+                shopRow.classList.add('expanded');
+            }
+        }
+
+        function toggleAllShops() {
+            const shopRows = document.querySelectorAll('.shop-row');
+            allExpanded = !allExpanded;
+
+            shopRows.forEach(row => {
+                if (allExpanded) {
+                    row.classList.add('expanded');
+                } else {
+                    row.classList.remove('expanded');
+                }
+            });
+
+            document.querySelector('.btn-expand').textContent =
+                allExpanded ? '📕 Chiudi Tutto' : '📖 Espandi Tutto';
+        }
+
+        function filterPivotTable() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const shopRows = document.querySelectorAll('.shop-row');
+
+            shopRows.forEach(row => {
+                const shopCode = row.getAttribute('data-shop').toLowerCase();
+                const shopName = row.getAttribute('data-shop-name').toLowerCase();
+                const operatorCells = row.querySelectorAll('.operators-table tbody tr td:nth-child(2)');
+                let hasMatchingOperator = false;
+
+                operatorCells.forEach(cell => {
+                    if (cell.textContent.toLowerCase().includes(searchTerm)) {
+                        hasMatchingOperator = true;
+                    }
+                });
+
+                if (shopCode.includes(searchTerm) || shopName.includes(searchTerm) || hasMatchingOperator || searchTerm === '') {
+                    row.style.display = 'block';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function sortPivotTable() {
+            const sortBy = document.getElementById('sortSelect').value;
+            let sortedData = [...pivotData];
+
+            switch (sortBy) {
+                case 'commission':
+                    sortedData.sort((a, b) => b.commission - a.commission);
+                    break;
+                case 'sales':
+                    sortedData.sort((a, b) => b.totalSales - a.totalSales);
+                    break;
+                case 'operators':
+                    sortedData.sort((a, b) => b.operatorCount - a.operatorCount);
+                    break;
+                case 'name':
+                    sortedData.sort((a, b) => a.shop.localeCompare(b.shop));
+                    break;
+            }
+
+            pivotData = sortedData;
+            renderPivotTable();
+        }
+
+        function filterRatesTable() {
+            const searchTerm = document.getElementById('employeeSearch').value.toLowerCase();
+            const shopFilter = document.getElementById('employeeShopFilter').value;
+            const ratesFilter = document.getElementById('ratesFilter').value;
+
+            const tbody = document.getElementById('ratesTableBody');
+            const rows = tbody.querySelectorAll('tr');
+
+            let visibleRows = 0;
+
+            rows.forEach(row => {
+                const operatorName = row.cells[0].textContent.toLowerCase();
+                const operatorShopDisplay = row.cells[1].textContent;
+                const hasCustomRate = row.classList.contains('custom-rate');
+
+                // Extract shop code from the display name to match filter
+                let operatorShopCode = '';
+                // Find shop code by reverse lookup from display name
+                Object.keys(operatorTotals).forEach(opName => {
+                    const op = operatorTotals[opName];
+                    if (row.cells[0].textContent === op.operatore) {
+                        operatorShopCode = op.codDep;
+                    }
+                });
+
+                // Check search term
+                const matchesSearch = searchTerm === '' || operatorName.includes(searchTerm);
+
+                // Check shop filter
+                const matchesShop = shopFilter === '' || operatorShopCode === shopFilter;
+
+                // Check rates filter
+                let matchesRatesFilter = true;
+                if (ratesFilter === 'custom') {
+                    matchesRatesFilter = hasCustomRate;
+                } else if (ratesFilter === 'default') {
+                    matchesRatesFilter = !hasCustomRate;
+                }
+
+                if (matchesSearch && matchesShop && matchesRatesFilter) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Show/hide "no results" message
+            const container = document.getElementById('ratesTableContainer');
+            let noResultsMsg = container.querySelector('.no-results-message');
+
+            if (visibleRows === 0 && rows.length > 0) {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('div');
+                    noResultsMsg.className = 'no-results-message';
+                    noResultsMsg.style.cssText = 'text-align: center; padding: 40px; color: #666; font-style: italic;';
+                    noResultsMsg.innerHTML = '🔍 Nessun dipendente trovato con i filtri attuali';
+                    container.appendChild(noResultsMsg);
+                }
+                noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById('employeeSearch').value = '';
+            document.getElementById('employeeShopFilter').value = '';
+            document.getElementById('ratesFilter').value = 'all';
+            filterRatesTable();
+        }
+    </script>
+</body>
+</html>

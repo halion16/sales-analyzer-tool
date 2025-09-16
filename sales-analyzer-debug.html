@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug EXPORT_ITEMVEN Parser</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .upload-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px dashed rgba(255,255,255,0.6);
+            border-radius: 8px;
+            padding: 40px 60px;
+            cursor: pointer;
+        }
+
+        .debug-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            font-size: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .header-analysis {
+            background: #e2e3e5;
+            border: 1px solid #d6d8db;
+            margin: 10px 0;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug EXPORT_ITEMVEN Parser</h1>
+
+        <div class="upload-section">
+            <div class="file-upload">
+                <input type="file" id="csvFile" accept=".csv" />
+                <div class="file-upload-btn">
+                    <div>📁 Carica EXPORT_ITEMVEN.CSV</div>
+                    <div>Debug completo del parsing</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="debugOutput" class="debug-output">
+            Carica il file CSV per vedere il debug dettagliato...
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('csvFile').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                debugParseCSV(e.target.result, file.name);
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function debugParseCSV(csvText, fileName) {
+            const output = document.getElementById('debugOutput');
+            let debug = '';
+
+            try {
+                debug += `=== DEBUG PARSING ${fileName} ===\n\n`;
+
+                const lines = csvText.trim().split('\n');
+                debug += `Totale righe: ${lines.length}\n\n`;
+
+                if (lines.length === 0) {
+                    throw new Error('File vuoto');
+                }
+
+                // Header analysis
+                const headerLine = lines[0];
+                debug += `HEADER RAW (${headerLine.length} caratteri):\n`;
+                debug += `"${headerLine}"\n\n`;
+
+                // Show bytes
+                debug += `HEADER BYTES:\n`;
+                for (let i = 0; i < Math.min(headerLine.length, 100); i++) {
+                    const char = headerLine[i];
+                    const code = headerLine.charCodeAt(i);
+                    debug += `[${i}] '${char}' (${code}) ${code === 9 ? 'TAB' : code === 32 ? 'SPACE' : ''}\n`;
+                }
+                debug += `\n`;
+
+                // Try different splitting methods
+                debug += `=== TENTATIVO 1: Split per TAB ===\n`;
+                let headers1 = headerLine.split('\t');
+                debug += `Colonne trovate: ${headers1.length}\n`;
+                headers1.forEach((col, i) => {
+                    debug += `[${i}] "${col}"\n`;
+                });
+
+                debug += `\n=== TENTATIVO 2: Split per spazi multipli ===\n`;
+                let headers2 = headerLine.split(/\s+/);
+                debug += `Colonne trovate: ${headers2.length}\n`;
+                headers2.forEach((col, i) => {
+                    debug += `[${i}] "${col}"\n`;
+                });
+
+                debug += `\n=== TENTATIVO 3: Split per spazi di 2+ caratteri ===\n`;
+                let headers3 = headerLine.split(/\s{2,}/);
+                debug += `Colonne trovate: ${headers3.length}\n`;
+                headers3.forEach((col, i) => {
+                    debug += `[${i}] "${col}"\n`;
+                });
+
+                debug += `\n=== TENTATIVO 4: Split manuale considerando posizioni fisse ===\n`;
+                // Assuming fixed width columns
+                debug += `Posizioni dei caratteri:\n`;
+                let pos = 0;
+                let words = [];
+                let currentWord = '';
+
+                for (let i = 0; i < headerLine.length; i++) {
+                    const char = headerLine[i];
+                    if (char !== ' ' && char !== '\t') {
+                        if (currentWord === '') {
+                            debug += `Inizia parola alla posizione ${i}: `;
+                        }
+                        currentWord += char;
+                    } else if (currentWord !== '') {
+                        debug += `"${currentWord}" (pos ${i - currentWord.length} - ${i-1})\n`;
+                        words.push(currentWord);
+                        currentWord = '';
+                    }
+                }
+                if (currentWord !== '') {
+                    debug += `"${currentWord}" (pos ${headerLine.length - currentWord.length} - ${headerLine.length-1})\n`;
+                    words.push(currentWord);
+                }
+
+                debug += `\nParole estratte: ${words.length}\n`;
+                words.forEach((word, i) => {
+                    debug += `[${i}] "${word}"\n`;
+                });
+
+                // Check for target columns in each method
+                debug += `\n=== RICERCA COLONNE TARGET ===\n`;
+                const targetColumns = ['OPERATORE', 'VAL.NETTO', 'COD.DEP', 'DATA'];
+
+                [headers1, headers2, headers3, words].forEach((headerArray, methodIndex) => {
+                    debug += `\nMetodo ${methodIndex + 1}:\n`;
+                    targetColumns.forEach(target => {
+                        const found = headerArray.findIndex(h => h.toUpperCase().includes(target));
+                        debug += `  ${target}: ${found >= 0 ? `TROVATO indice ${found} ("${headerArray[found]}")` : 'NON TROVATO'}\n`;
+                    });
+                });
+
+                // Analyze first few data rows
+                debug += `\n=== ANALISI PRIME 3 RIGHE DATI ===\n`;
+                for (let i = 1; i <= Math.min(3, lines.length - 1); i++) {
+                    const dataLine = lines[i];
+                    debug += `\nRiga ${i} (${dataLine.length} caratteri):\n`;
+                    debug += `"${dataLine}"\n`;
+
+                    // Try same splitting methods on data
+                    [dataLine.split('\t'), dataLine.split(/\s+/), dataLine.split(/\s{2,}/)].forEach((dataCols, methodIndex) => {
+                        debug += `  Metodo ${methodIndex + 1}: ${dataCols.length} colonne\n`;
+                        dataCols.slice(0, 10).forEach((col, j) => {
+                            debug += `    [${j}] "${col}"\n`;
+                        });
+                    });
+                }
+
+                // Try to extract data using the best method
+                debug += `\n=== TENTATIVO ESTRAZIONE DATI ===\n`;
+
+                let bestHeaders = null;
+                let bestMethod = '';
+
+                // Choose method with most reasonable column count and finds target columns
+                if (words.some(h => h.toUpperCase().includes('OPERATORE')) &&
+                    words.some(h => h.toUpperCase().includes('VAL.NETTO'))) {
+                    bestHeaders = words;
+                    bestMethod = 'Parsing manuale';
+                } else if (headers3.some(h => h.toUpperCase().includes('OPERATORE')) &&
+                          headers3.some(h => h.toUpperCase().includes('VAL.NETTO'))) {
+                    bestHeaders = headers3;
+                    bestMethod = 'Split spazi 2+';
+                } else if (headers1.some(h => h.toUpperCase().includes('OPERATORE')) &&
+                          headers1.some(h => h.toUpperCase().includes('VAL.NETTO'))) {
+                    bestHeaders = headers1;
+                    bestMethod = 'Split TAB';
+                } else if (headers2.some(h => h.toUpperCase().includes('OPERATORE')) &&
+                          headers2.some(h => h.toUpperCase().includes('VAL.NETTO'))) {
+                    bestHeaders = headers2;
+                    bestMethod = 'Split spazi';
+                }
+
+                if (bestHeaders) {
+                    debug += `Metodo migliore: ${bestMethod}\n`;
+                    debug += `Colonne: ${bestHeaders.length}\n`;
+
+                    const operatoreIndex = bestHeaders.findIndex(h => h.toUpperCase().includes('OPERATORE'));
+                    const valNettoIndex = bestHeaders.findIndex(h => h.toUpperCase().includes('VAL.NETTO'));
+                    const codDepIndex = bestHeaders.findIndex(h => h.toUpperCase().includes('COD.DEP'));
+                    const dataIndex = bestHeaders.findIndex(h => h.toUpperCase().includes('DATA'));
+
+                    debug += `\nIndici colonne:\n`;
+                    debug += `  OPERATORE: ${operatoreIndex} ("${bestHeaders[operatoreIndex]}")\n`;
+                    debug += `  VAL.NETTO: ${valNettoIndex} ("${bestHeaders[valNettoIndex]}")\n`;
+                    debug += `  COD.DEP: ${codDepIndex >= 0 ? codDepIndex + ' ("' + bestHeaders[codDepIndex] + '")' : 'NON TROVATO'}\n`;
+                    debug += `  DATA: ${dataIndex >= 0 ? dataIndex + ' ("' + bestHeaders[dataIndex] + '")' : 'NON TROVATO'}\n`;
+
+                    // Process first few data rows
+                    debug += `\n=== ESTRAZIONE DATI TEST ===\n`;
+                    for (let i = 1; i <= Math.min(5, lines.length - 1); i++) {
+                        const dataLine = lines[i];
+                        let dataCols;
+
+                        if (bestMethod === 'Split TAB') {
+                            dataCols = dataLine.split('\t');
+                        } else if (bestMethod === 'Split spazi 2+') {
+                            dataCols = dataLine.split(/\s{2,}/);
+                        } else if (bestMethod === 'Split spazi') {
+                            dataCols = dataLine.split(/\s+/);
+                        } else {
+                            // Manual parsing - same logic as headers
+                            dataCols = [];
+                            let currentWord = '';
+                            for (let j = 0; j < dataLine.length; j++) {
+                                const char = dataLine[j];
+                                if (char !== ' ' && char !== '\t') {
+                                    currentWord += char;
+                                } else if (currentWord !== '') {
+                                    dataCols.push(currentWord);
+                                    currentWord = '';
+                                }
+                            }
+                            if (currentWord !== '') {
+                                dataCols.push(currentWord);
+                            }
+                        }
+
+                        debug += `\nRiga ${i} -> ${dataCols.length} colonne:\n`;
+                        if (operatoreIndex < dataCols.length) {
+                            debug += `  Operatore: "${dataCols[operatoreIndex]}"\n`;
+                        }
+                        if (valNettoIndex < dataCols.length) {
+                            debug += `  Val.Netto: "${dataCols[valNettoIndex]}"\n`;
+                        }
+                        if (codDepIndex >= 0 && codDepIndex < dataCols.length) {
+                            debug += `  Cod.Dep: "${dataCols[codDepIndex]}"\n`;
+                        }
+                        if (dataIndex >= 0 && dataIndex < dataCols.length) {
+                            debug += `  Data: "${dataCols[dataIndex]}"\n`;
+                        }
+                    }
+
+                    output.className = 'debug-output success';
+                } else {
+                    debug += `❌ NESSUN METODO HA TROVATO LE COLONNE NECESSARIE\n`;
+                    debug += `\nVerifica che il file contenga le colonne:\n`;
+                    debug += `- OPERATORE\n`;
+                    debug += `- VAL.NETTO\n`;
+                    output.className = 'debug-output error';
+                }
+
+            } catch (error) {
+                debug += `\n❌ ERRORE: ${error.message}\n`;
+                output.className = 'debug-output error';
+            }
+
+            output.textContent = debug;
+        }
+    </script>
+</body>
+</html>
