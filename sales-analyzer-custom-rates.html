@@ -306,6 +306,119 @@
             font-size: 12px;
             color: #666;
         }
+
+        /* Comparison Mode Styles */
+        .comparison-metrics {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .period-comparison {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            min-width: 120px;
+        }
+
+        .period-comparison:first-child {
+            background: rgba(227, 242, 253, 0.3);
+            border: 1px solid #e3f2fd;
+        }
+
+        .period-comparison:nth-child(2) {
+            background: rgba(255, 243, 224, 0.3);
+            border: 1px solid #fff3e0;
+        }
+
+        .period-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .period-values {
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            gap: 2px;
+        }
+
+        .period-values div {
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Ensure better contrast for period labels */
+        .period-comparison:first-child .period-label {
+            color: #1565c0;
+        }
+
+        .period-comparison:nth-child(2) .period-label {
+            color: #ef6c00;
+        }
+
+        .growth-indicators {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
+            padding: 8px;
+            border-radius: 6px;
+            background: rgba(248, 249, 250, 0.5);
+            border: 1px solid #dee2e6;
+        }
+
+        .growth-metric {
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .significant-change {
+            background: rgba(255, 235, 59, 0.1) !important;
+            border-left: 3px solid #ff9800 !important;
+        }
+
+        .comparison-mode .shop-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .comparison-mode .shop-name {
+            color: white;
+        }
+
+        .comparison-mode .shop-summary {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .comparison-mode .expand-icon {
+            color: white;
+        }
+
+        /* Responsive comparison mode */
+        @media (max-width: 768px) {
+            .comparison-metrics {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .period-comparison {
+                min-width: 100px;
+            }
+        }
         .expand-icon {
             font-size: 20px;
             transition: transform 0.3s ease;
@@ -558,9 +671,34 @@
                     </select>
                 </div>
                 <div class="control-group">
+                    <label>📊 Modalità Analisi</label>
+                    <select id="analysisMode" onchange="toggleComparisonMode()">
+                        <option value="single">Singolo Periodo</option>
+                        <option value="compare">Confronta Periodi</option>
+                    </select>
+                </div>
+                <div class="control-group">
                     <label>Filtra per Negozio</label>
                     <select id="shopFilter">
                         <option value="">Tutti i negozi</option>
+                    </select>
+                </div>
+                <div class="control-group" id="singlePeriodGroup">
+                    <label>📅 Filtra per Periodo</label>
+                    <select id="periodFilter">
+                        <option value="">Tutti i periodi</option>
+                    </select>
+                </div>
+                <div class="control-group hidden" id="periodAGroup">
+                    <label>📅 Periodo A (Base)</label>
+                    <select id="periodFilterA">
+                        <option value="">Seleziona periodo A</option>
+                    </select>
+                </div>
+                <div class="control-group hidden" id="periodBGroup">
+                    <label>📅 Periodo B (Confronto)</label>
+                    <select id="periodFilterB">
+                        <option value="">Seleziona periodo B</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -902,6 +1040,56 @@
             }
         }
 
+        // Toggle between single and comparison mode
+        function toggleComparisonMode() {
+            const analysisMode = document.getElementById('analysisMode').value;
+            const singleGroup = document.getElementById('singlePeriodGroup');
+            const periodAGroup = document.getElementById('periodAGroup');
+            const periodBGroup = document.getElementById('periodBGroup');
+
+            if (analysisMode === 'compare') {
+                singleGroup.classList.add('hidden');
+                periodAGroup.classList.remove('hidden');
+                periodBGroup.classList.remove('hidden');
+
+                // Populate comparison period selectors
+                populateComparisonPeriods();
+            } else {
+                singleGroup.classList.remove('hidden');
+                periodAGroup.classList.add('hidden');
+                periodBGroup.classList.add('hidden');
+            }
+        }
+
+        // Populate period selectors for comparison
+        function populateComparisonPeriods() {
+            const periodsFound = new Set();
+            rawData.forEach(record => {
+                if (record.periodo !== 'SCONOSCIUTO') {
+                    periodsFound.add(record.periodo);
+                }
+            });
+
+            const periodFilterA = document.getElementById('periodFilterA');
+            const periodFilterB = document.getElementById('periodFilterB');
+
+            periodFilterA.innerHTML = '<option value="">Seleziona periodo A</option>';
+            periodFilterB.innerHTML = '<option value="">Seleziona periodo B</option>';
+
+            const sortedPeriods = Array.from(periodsFound).sort();
+            sortedPeriods.forEach(periodo => {
+                const recordsCount = rawData.filter(r => r.periodo === periodo).length;
+                const [year, month] = periodo.split('-');
+                const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
+                                  'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                const monthName = monthNames[parseInt(month) - 1] || month;
+                const optionText = `${monthName} ${year} (${recordsCount} trans.)`;
+
+                periodFilterA.innerHTML += `<option value="${periodo}">${optionText}</option>`;
+                periodFilterB.innerHTML += `<option value="${periodo}">${optionText}</option>`;
+            });
+        }
+
         // Load saved data on page load
         loadSavedRates();
         loadSavedShopNames();
@@ -988,11 +1176,15 @@
             const codDepIndex = headers.findIndex(h =>
                 h.toUpperCase().includes('COD.DEP') || h.toUpperCase() === 'COD.DEP'
             );
+            const dataIndex = headers.findIndex(h =>
+                h.toUpperCase().includes('DATA') || h.toUpperCase() === 'DATA'
+            );
 
             debugOutput += `Indici colonne:\n`;
             debugOutput += `OPERATORE: ${operatoreIndex} ("${headers[operatoreIndex] || 'NON TROVATO'}")\n`;
             debugOutput += `VAL.NETTO: ${valNettoIndex} ("${headers[valNettoIndex] || 'NON TROVATO'}")\n`;
-            debugOutput += `COD.DEP: ${codDepIndex} ("${headers[codDepIndex] || 'NON TROVATO'}")\n\n`;
+            debugOutput += `COD.DEP: ${codDepIndex} ("${headers[codDepIndex] || 'NON TROVATO'}")\n`;
+            debugOutput += `DATA: ${dataIndex} ("${headers[dataIndex] || 'NON TROVATO'}")\n\n`;
 
             if (operatoreIndex === -1 || valNettoIndex === -1) {
                 debugOutput += '❌ ERRORE: Colonne OPERATORE o VAL.NETTO non trovate!\n';
@@ -1020,6 +1212,7 @@
                 const operatore = columns[operatoreIndex];
                 const valNettoStr = columns[valNettoIndex];
                 const codDep = codDepIndex >= 0 ? columns[codDepIndex] : 'N/A';
+                const dataStr = dataIndex >= 0 ? columns[dataIndex] : '';
 
                 if (!operatore || !valNettoStr) continue;
 
@@ -1028,11 +1221,46 @@
                 const cleanAmount = valNettoStr.replace(',', '.');
                 amount = parseFloat(cleanAmount) || 0;
 
+                // Parse date
+                let parsedDate = null;
+                let periodo = 'SCONOSCIUTO';
+
+                if (dataStr) {
+                    // Try different date formats: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
+                    const dateParts = dataStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})|(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+
+                    if (dateParts) {
+                        if (dateParts[1]) {
+                            // DD/MM/YYYY or DD-MM-YYYY format
+                            const day = parseInt(dateParts[1]);
+                            const month = parseInt(dateParts[2]);
+                            const year = parseInt(dateParts[3]);
+                            parsedDate = new Date(year, month - 1, day);
+                        } else {
+                            // YYYY/MM/DD or YYYY-MM-DD format
+                            const year = parseInt(dateParts[4]);
+                            const month = parseInt(dateParts[5]);
+                            const day = parseInt(dateParts[6]);
+                            parsedDate = new Date(year, month - 1, day);
+                        }
+
+                        // Generate period string (YYYY-MM)
+                        if (parsedDate && !isNaN(parsedDate.getTime())) {
+                            const year = parsedDate.getFullYear();
+                            const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+                            periodo = `${year}-${month}`;
+                        }
+                    }
+                }
+
                 if (amount > 0) {
                     rawData.push({
                         operatore: operatore,
                         amount: amount,
-                        codDep: codDep
+                        codDep: codDep,
+                        data: dataStr,
+                        parsedDate: parsedDate,
+                        periodo: periodo
                     });
                     shops.add(codDep);
                     validRows++;
@@ -1040,6 +1268,29 @@
             }
 
             debugOutput += `✅ Parsing completato: ${validRows} righe valide\n`;
+
+            // Analyze detected periods
+            const periodsFound = new Set();
+            rawData.forEach(record => {
+                if (record.periodo !== 'SCONOSCIUTO') {
+                    periodsFound.add(record.periodo);
+                }
+            });
+
+            if (periodsFound.size > 0) {
+                debugOutput += `\n📅 Periodi rilevati: ${periodsFound.size}\n`;
+                const sortedPeriods = Array.from(periodsFound).sort();
+                sortedPeriods.forEach(periodo => {
+                    const recordsInPeriod = rawData.filter(r => r.periodo === periodo).length;
+                    debugOutput += `  • ${periodo}: ${recordsInPeriod} transazioni\n`;
+                });
+
+                if (periodsFound.size > 1) {
+                    debugOutput += `\n✨ Multi-periodo rilevato! Puoi ora filtrare per periodo specifico.\n`;
+                }
+            } else {
+                debugOutput += `\n⚠️ Nessuna data valida rilevata. Verifica formato colonna DATA.\n`;
+            }
 
             debug.textContent = debugOutput;
 
@@ -1061,6 +1312,26 @@
                 Array.from(shops).sort().forEach(shop => {
                     const displayName = getShopDisplayName(shop);
                     employeeShopFilter.innerHTML += `<option value="${shop}">${displayName}</option>`;
+                });
+
+                // Populate period filter
+                const periodsFound = new Set();
+                rawData.forEach(record => {
+                    if (record.periodo !== 'SCONOSCIUTO') {
+                        periodsFound.add(record.periodo);
+                    }
+                });
+
+                const periodFilter = document.getElementById('periodFilter');
+                periodFilter.innerHTML = '<option value="">Tutti i periodi</option>';
+                const sortedPeriods = Array.from(periodsFound).sort();
+                sortedPeriods.forEach(periodo => {
+                    const recordsCount = rawData.filter(r => r.periodo === periodo).length;
+                    const [year, month] = periodo.split('-');
+                    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
+                                      'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                    const monthName = monthNames[parseInt(month) - 1] || month;
+                    periodFilter.innerHTML += `<option value="${periodo}">${monthName} ${year} (${recordsCount} trans.)</option>`;
                 });
 
                 // Build shops table with loaded data
@@ -1175,14 +1446,39 @@
             if (rawData.length === 0) return;
 
             const calculationMode = document.getElementById('calculationMode').value;
+            const analysisMode = document.getElementById('analysisMode').value;
             const defaultRate = parseFloat(document.getElementById('defaultRate').value) / 100;
             const shopFilter = document.getElementById('shopFilter').value;
 
+            if (analysisMode === 'compare') {
+                processComparisonData();
+                return;
+            }
+
+            // Single period mode (existing logic)
+            const periodFilter = document.getElementById('periodFilter').value;
+
             // Filter data if needed
             let filteredData = rawData;
+            let filterInfo = '';
+
             if (shopFilter) {
-                filteredData = rawData.filter(r => r.codDep === shopFilter);
+                filteredData = filteredData.filter(r => r.codDep === shopFilter);
+                const shopName = getShopDisplayName(shopFilter);
+                filterInfo += `Negozio: ${shopName} • `;
             }
+
+            if (periodFilter) {
+                filteredData = filteredData.filter(r => r.periodo === periodFilter);
+                const [year, month] = periodFilter.split('-');
+                const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                                  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                const monthName = monthNames[parseInt(month) - 1] || month;
+                filterInfo += `Periodo: ${monthName} ${year} • `;
+            }
+
+            // Store filter info for display
+            window.currentFilterInfo = filterInfo;
 
             // Group by shop and operator
             const shopOperatorGroups = {};
@@ -1254,6 +1550,172 @@
             renderResults();
         }
 
+        // Process comparison between two periods
+        function processComparisonData() {
+            const calculationMode = document.getElementById('calculationMode').value;
+            const defaultRate = parseFloat(document.getElementById('defaultRate').value) / 100;
+            const shopFilter = document.getElementById('shopFilter').value;
+            const periodA = document.getElementById('periodFilterA').value;
+            const periodB = document.getElementById('periodFilterB').value;
+
+            if (!periodA || !periodB) {
+                alert('⚠️ Seleziona entrambi i periodi per il confronto!');
+                return;
+            }
+
+            if (periodA === periodB) {
+                alert('⚠️ Seleziona due periodi diversi per il confronto!');
+                return;
+            }
+
+            // Filter data for both periods
+            let dataA = rawData.filter(r => r.periodo === periodA);
+            let dataB = rawData.filter(r => r.periodo === periodB);
+
+            if (shopFilter) {
+                dataA = dataA.filter(r => r.codDep === shopFilter);
+                dataB = dataB.filter(r => r.codDep === shopFilter);
+            }
+
+            // Process both periods separately
+            const resultA = processDataForPeriod(dataA, calculationMode, defaultRate, 'A');
+            const resultB = processDataForPeriod(dataB, calculationMode, defaultRate, 'B');
+
+            // Create comparison data structure
+            pivotData = createComparisonData(resultA, resultB, periodA, periodB);
+
+            // Set filter info for comparison
+            const [yearA, monthA] = periodA.split('-');
+            const [yearB, monthB] = periodB.split('-');
+            const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                              'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+            const monthNameA = monthNames[parseInt(monthA) - 1];
+            const monthNameB = monthNames[parseInt(monthB) - 1];
+
+            let filterInfo = `Confronto: ${monthNameA} ${yearA} vs ${monthNameB} ${yearB} • `;
+            if (shopFilter) {
+                const shopName = getShopDisplayName(shopFilter);
+                filterInfo += `Negozio: ${shopName} • `;
+            }
+
+            window.currentFilterInfo = filterInfo;
+            window.isComparisonMode = true;
+            window.periodA = periodA;
+            window.periodB = periodB;
+
+            renderResults();
+        }
+
+        // Helper function to process data for a single period
+        function processDataForPeriod(data, calculationMode, defaultRate, periodLabel) {
+            const shopOperatorGroups = {};
+            const shopTotals = {};
+
+            data.forEach(record => {
+                const shopKey = record.codDep;
+                const operatorKey = `${record.codDep}|${record.operatore}`;
+
+                // Shop totals
+                if (!shopTotals[shopKey]) {
+                    shopTotals[shopKey] = {
+                        shop: shopKey,
+                        totalSales: 0,
+                        operators: new Set(),
+                        transactions: 0
+                    };
+                }
+                shopTotals[shopKey].totalSales += record.amount;
+                shopTotals[shopKey].operators.add(record.operatore);
+                shopTotals[shopKey].transactions += 1;
+
+                // Shop-Operator combinations
+                if (!shopOperatorGroups[operatorKey]) {
+                    shopOperatorGroups[operatorKey] = {
+                        shop: record.codDep,
+                        operatore: record.operatore,
+                        totalSales: 0,
+                        transactions: 0
+                    };
+                }
+                shopOperatorGroups[operatorKey].totalSales += record.amount;
+                shopOperatorGroups[operatorKey].transactions += 1;
+            });
+
+            // Process pivot data
+            const pivotResult = [];
+            Object.values(shopTotals).forEach(shop => {
+                shop.operatorCount = shop.operators.size;
+
+                const shopOperators = Object.values(shopOperatorGroups)
+                    .filter(item => item.shop === shop.shop)
+                    .map(op => {
+                        const rate = calculationMode === 'custom' && customRates[op.operatore] ?
+                                   customRates[op.operatore] : defaultRate;
+
+                        return {
+                            ...op,
+                            rate: rate,
+                            commission: op.totalSales * rate,
+                            percentageInShop: (op.totalSales / shop.totalSales) * 100,
+                            isCustomRate: calculationMode === 'custom' && customRates[op.operatore] !== undefined
+                        };
+                    })
+                    .sort((a, b) => b.commission - a.commission);
+
+                shop.commission = shopOperators.reduce((sum, op) => sum + op.commission, 0);
+                shop.avgPerOperator = shop.operatorCount > 0 ? shop.commission / shop.operatorCount : 0;
+                shop.operators = shopOperators;
+                pivotResult.push(shop);
+            });
+
+            return pivotResult.sort((a, b) => b.commission - a.commission);
+        }
+
+        // Create comparison data structure with growth calculations
+        function createComparisonData(resultA, resultB, periodA, periodB) {
+            const comparisonData = [];
+
+            // Get all shops from both periods
+            const allShops = new Set();
+            resultA.forEach(shop => allShops.add(shop.shop));
+            resultB.forEach(shop => allShops.add(shop.shop));
+
+            Array.from(allShops).forEach(shopCode => {
+                const shopA = resultA.find(s => s.shop === shopCode);
+                const shopB = resultB.find(s => s.shop === shopCode);
+
+                const salesA = shopA ? shopA.totalSales : 0;
+                const salesB = shopB ? shopB.totalSales : 0;
+                const commissionA = shopA ? shopA.commission : 0;
+                const commissionB = shopB ? shopB.commission : 0;
+
+                // Calculate growth percentages
+                const salesGrowth = salesA > 0 ? ((salesB - salesA) / salesA) * 100 : (salesB > 0 ? 100 : 0);
+                const commissionGrowth = commissionA > 0 ? ((commissionB - commissionA) / commissionA) * 100 : (commissionB > 0 ? 100 : 0);
+
+                comparisonData.push({
+                    shop: shopCode,
+                    periodA: periodA,
+                    periodB: periodB,
+                    salesA: salesA,
+                    salesB: salesB,
+                    commissionA: commissionA,
+                    commissionB: commissionB,
+                    salesGrowth: salesGrowth,
+                    commissionGrowth: commissionGrowth,
+                    operatorCountA: shopA ? shopA.operatorCount : 0,
+                    operatorCountB: shopB ? shopB.operatorCount : 0,
+                    transactionsA: shopA ? shopA.transactions : 0,
+                    transactionsB: shopB ? shopB.transactions : 0,
+                    // Keep detailed operator data for expanded view
+                    operatorsA: shopA ? shopA.operators : [],
+                    operatorsB: shopB ? shopB.operators : []
+                });
+            });
+
+            return comparisonData.sort((a, b) => Math.abs(b.salesGrowth) - Math.abs(a.salesGrowth));
+        }
+
         function renderResults() {
             renderStats();
             renderPivotTable();
@@ -1268,44 +1730,105 @@
         }
 
         function renderStats() {
-            const totalSales = pivotData.reduce((sum, shop) => sum + shop.totalSales, 0);
-            const totalCommission = pivotData.reduce((sum, shop) => sum + shop.commission, 0);
-            const totalOperators = pivotData.reduce((sum, shop) => sum + shop.operatorCount, 0);
-            const totalShops = pivotData.length;
-
             const calculationMode = document.getElementById('calculationMode').value;
             const modeText = calculationMode === 'custom' ? 'Personalizzate' : 'Default';
 
-            document.getElementById('stats').innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-value">${totalShops}</div>
-                    <div>Negozi</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${totalOperators}</div>
-                    <div>Operatori</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">€${totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
-                    <div>Venduto Totale</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">€${totalCommission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
-                    <div>Provvigioni ${modeText}</div>
-                </div>
-            `;
+            // Add filter info if present
+            let filterDisplay = '';
+            if (window.currentFilterInfo) {
+                filterDisplay = `<div style="text-align: center; margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px; color: #1976d2; font-weight: bold;">📊 ${window.currentFilterInfo.slice(0, -3)}</div>`;
+            }
+
+            if (window.isComparisonMode) {
+                // Comparison mode stats
+                const totalSalesA = pivotData.reduce((sum, shop) => sum + shop.salesA, 0);
+                const totalSalesB = pivotData.reduce((sum, shop) => sum + shop.salesB, 0);
+                const totalCommissionA = pivotData.reduce((sum, shop) => sum + shop.commissionA, 0);
+                const totalCommissionB = pivotData.reduce((sum, shop) => sum + shop.commissionB, 0);
+                const totalShops = pivotData.length;
+
+                const salesGrowth = totalSalesA > 0 ? ((totalSalesB - totalSalesA) / totalSalesA) * 100 : 0;
+                const commissionGrowth = totalCommissionA > 0 ? ((totalCommissionB - totalCommissionA) / totalCommissionA) * 100 : 0;
+
+                const salesGrowthColor = salesGrowth >= 0 ? '#28a745' : '#dc3545';
+                const commissionGrowthColor = commissionGrowth >= 0 ? '#28a745' : '#dc3545';
+                const salesGrowthIcon = salesGrowth >= 0 ? '📈' : '📉';
+                const commissionGrowthIcon = commissionGrowth >= 0 ? '📈' : '📉';
+
+                document.getElementById('stats').innerHTML = filterDisplay + `
+                    <div class="stat-card">
+                        <div class="stat-value">${totalShops}</div>
+                        <div>Negozi Analizzati</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalSalesA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Vendite Periodo A</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalSalesB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Vendite Periodo B</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, ${salesGrowthColor}, ${salesGrowthColor}cc);">
+                        <div class="stat-value">${salesGrowthIcon} ${salesGrowth > 0 ? '+' : ''}${salesGrowth.toFixed(1)}%</div>
+                        <div>Crescita Vendite</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalCommissionA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Provvigioni A ${modeText}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalCommissionB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Provvigioni B ${modeText}</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, ${commissionGrowthColor}, ${commissionGrowthColor}cc);">
+                        <div class="stat-value">${commissionGrowthIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(1)}%</div>
+                        <div>Crescita Provvigioni</div>
+                    </div>
+                `;
+            } else {
+                // Single period mode (existing logic)
+                const totalSales = pivotData.reduce((sum, shop) => sum + shop.totalSales, 0);
+                const totalCommission = pivotData.reduce((sum, shop) => sum + shop.commission, 0);
+                const totalOperators = pivotData.reduce((sum, shop) => sum + shop.operatorCount, 0);
+                const totalShops = pivotData.length;
+
+                document.getElementById('stats').innerHTML = filterDisplay + `
+                    <div class="stat-card">
+                        <div class="stat-value">${totalShops}</div>
+                        <div>Negozi</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${totalOperators}</div>
+                        <div>Operatori</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Venduto Totale</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalCommission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Provvigioni ${modeText}</div>
+                    </div>
+                `;
+            }
         }
 
-        function renderPivotTable() {
-            const container = document.getElementById('pivotContainer');
 
+        function renderPivotTable() {
+            if (window.isComparisonMode) {
+                renderComparisonPivotTable();
+            } else {
+                renderSinglePeriodPivotTable();
+            }
+        }
+
+        function renderSinglePeriodPivotTable() {
+            const container = document.getElementById('pivotContainer');
             if (pivotData.length === 0) {
                 container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">Nessun dato disponibile</p>';
                 return;
             }
-
             let html = '';
-
             pivotData.forEach((shop, shopIndex) => {
                 const shopDisplayName = getShopDisplayName(shop.shop);
                 html += `
@@ -1347,11 +1870,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>`;
-
                 shop.operators.forEach((operator, index) => {
                     let rowClass = '';
                     let position = '';
-
                     if (index === 0) {
                         rowClass = 'operator-rank-1';
                         position = '🥇';
@@ -1364,15 +1885,12 @@
                     } else {
                         position = `${index + 1}°`;
                     }
-
                     if (operator.isCustomRate) {
                         rowClass += ' custom-rate';
                     }
-
                     const rateDisplay = operator.isCustomRate ?
                         `<strong>${(operator.rate * 100).toFixed(2)}%</strong> ⚙️` :
                         `${(operator.rate * 100).toFixed(2)}%`;
-
                     html += `
                         <tr class="${rowClass}">
                             <td class="text-center"><strong>${position}</strong></td>
@@ -1385,6 +1903,152 @@
                         </tr>
                     `;
                 });
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderComparisonPivotTable() {
+            const container = document.getElementById('pivotContainer');
+            if (pivotData.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">Nessun dato disponibile</p>';
+                return;
+            }
+
+            const periodA = document.getElementById('periodFilterA').selectedOptions[0]?.text || 'Periodo A';
+            const periodB = document.getElementById('periodFilterB').selectedOptions[0]?.text || 'Periodo B';
+
+            let html = '';
+            pivotData.forEach((shop, shopIndex) => {
+                const shopDisplayName = getShopDisplayName(shop.shop);
+                const salesGrowth = shop.salesA > 0 ? ((shop.salesB - shop.salesA) / shop.salesA) * 100 : (shop.salesB > 0 ? 100 : 0);
+                const commissionGrowth = shop.commissionA > 0 ? ((shop.commissionB - shop.commissionA) / shop.commissionA) * 100 : (shop.commissionB > 0 ? 100 : 0);
+
+                const salesGrowthColor = salesGrowth >= 0 ? '#28a745' : '#dc3545';
+                const commissionGrowthColor = commissionGrowth >= 0 ? '#28a745' : '#dc3545';
+                const salesGrowthIcon = salesGrowth >= 0 ? '📈' : '📉';
+                const commissionGrowthIcon = commissionGrowth >= 0 ? '📈' : '📉';
+
+                html += `
+                    <div class="shop-row comparison-mode" data-shop="${shop.shop}" data-shop-name="${shopDisplayName.toLowerCase()}">
+                        <div class="shop-header" onclick="toggleShop(${shopIndex})">
+                            <div class="shop-info">
+                                <div class="shop-name">🏪 ${shopDisplayName}</div>
+                                <div class="shop-summary">
+                                    ${Math.max((shop.operatorsA?.length || 0), (shop.operatorsB?.length || 0))} operatori attivi
+                                </div>
+                            </div>
+                            <div class="shop-metrics">
+                                <div class="comparison-metrics">
+                                    <div class="period-comparison">
+                                        <div class="period-label">${periodA}</div>
+                                        <div class="period-values">
+                                            <div>€${shop.salesA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                            <div>€${shop.commissionA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                        </div>
+                                    </div>
+                                    <div class="period-comparison">
+                                        <div class="period-label">${periodB}</div>
+                                        <div class="period-values">
+                                            <div>€${shop.salesB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                            <div>€${shop.commissionB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                        </div>
+                                    </div>
+                                    <div class="growth-indicators">
+                                        <div class="growth-metric" style="color: ${salesGrowthColor};">
+                                            ${salesGrowthIcon} ${salesGrowth > 0 ? '+' : ''}${salesGrowth.toFixed(1)}%
+                                        </div>
+                                        <div class="growth-metric" style="color: ${commissionGrowthColor};">
+                                            ${commissionGrowthIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="expand-icon">▶</div>
+                            </div>
+                        </div>
+                        <div class="operators-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="text-align: center; vertical-align: middle;">👤 Operatore</th>
+                                        <th colspan="3" style="text-align: center; background: #e3f2fd;">${periodA}</th>
+                                        <th colspan="3" style="text-align: center; background: #fff3e0;">${periodB}</th>
+                                        <th rowspan="2" style="text-align: center; vertical-align: middle;">📈 Crescita</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="background: #e3f2fd;">💰 Venduto</th>
+                                        <th style="background: #e3f2fd;">🏆 Provvigione</th>
+                                        <th style="background: #e3f2fd;">🔢 Trans.</th>
+                                        <th style="background: #fff3e0;">💰 Venduto</th>
+                                        <th style="background: #fff3e0;">🏆 Provvigione</th>
+                                        <th style="background: #fff3e0;">🔢 Trans.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                // Get all operators from both periods
+                const allOperators = new Set([
+                    ...(shop.operatorsA || []).map(op => op.operatore),
+                    ...(shop.operatorsB || []).map(op => op.operatore)
+                ]);
+
+                // Create combined operator data for comparison
+                const combinedOperators = Array.from(allOperators).map(operatorName => {
+                    const opA = (shop.operatorsA || []).find(op => op.operatore === operatorName);
+                    const opB = (shop.operatorsB || []).find(op => op.operatore === operatorName);
+
+                    const salesA = opA ? opA.totalSales : 0;
+                    const salesB = opB ? opB.totalSales : 0;
+                    const commissionA = opA ? opA.commission : 0;
+                    const commissionB = opB ? opB.commission : 0;
+                    const transactionsA = opA ? opA.transactions : 0;
+                    const transactionsB = opB ? opB.transactions : 0;
+
+                    const growthPercent = salesA > 0 ? ((salesB - salesA) / salesA) * 100 : (salesB > 0 ? 100 : 0);
+
+                    return {
+                        operatore: operatorName,
+                        salesA, salesB, commissionA, commissionB,
+                        transactionsA, transactionsB, growthPercent,
+                        totalSales: salesA + salesB, // For sorting
+                        isCustomRate: (opA && opA.isCustomRate) || (opB && opB.isCustomRate)
+                    };
+                }).sort((a, b) => b.totalSales - a.totalSales);
+
+                combinedOperators.forEach((operator, index) => {
+                    const growthColor = operator.growthPercent >= 0 ? '#28a745' : '#dc3545';
+                    const growthIcon = operator.growthPercent >= 0 ? '📈' : '📉';
+
+                    let rowClass = '';
+                    if (operator.isCustomRate) {
+                        rowClass += 'custom-rate ';
+                    }
+
+                    // Highlight significant changes
+                    if (Math.abs(operator.growthPercent) > 20) {
+                        rowClass += 'significant-change ';
+                    }
+
+                    html += `
+                        <tr class="${rowClass}">
+                            <td><strong>${operator.operatore}</strong></td>
+                            <td class="currency" style="background: #f8f9fa;">€${operator.salesA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="currency" style="background: #f8f9fa;">€${operator.commissionA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="text-center" style="background: #f8f9fa;">${operator.transactionsA}</td>
+                            <td class="currency" style="background: #fff8e1;">€${operator.salesB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="currency" style="background: #fff8e1;">€${operator.commissionB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="text-center" style="background: #fff8e1;">${operator.transactionsB}</td>
+                            <td class="text-center" style="color: ${growthColor}; font-weight: bold;">
+                                ${growthIcon} ${operator.growthPercent > 0 ? '+' : ''}${operator.growthPercent.toFixed(1)}%
+                            </td>
+                        </tr>
+                    `;
+                });
 
                 html += `
                                 </tbody>
@@ -1393,7 +2057,6 @@
                     </div>
                 `;
             });
-
             container.innerHTML = html;
         }
 
