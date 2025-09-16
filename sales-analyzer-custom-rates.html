@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analizzatore Vendite - Percentuali Personalizzate</title>
+    <!-- jsPDF library for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -578,6 +581,7 @@
                         <option value="name">Ordina per Nome</option>
                     </select>
                     <button class="btn-expand" onclick="toggleAllShops()">📖 Espandi Tutto</button>
+                    <button class="btn" onclick="exportToPDF()" style="background: #dc3545;">📄 Esporta PDF</button>
                 </div>
 
                 <div class="pivot-container" id="pivotContainer"></div>
@@ -1537,6 +1541,309 @@
             document.getElementById('employeeShopFilter').value = '';
             document.getElementById('ratesFilter').value = 'all';
             filterRatesTable();
+        }
+
+        // PDF Export functionality
+        function exportToPDF() {
+            if (pivotData.length === 0) {
+                alert('Nessun dato da esportare. Elabora prima i dati!');
+                return;
+            }
+
+            // Initialize jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            // Helper function to clean text from problematic characters
+            function cleanText(text) {
+                return text
+                    .replace(/📊/g, '[CHART]')
+                    .replace(/📈/g, '[TREND]')
+                    .replace(/🏪/g, '[SHOP]')
+                    .replace(/🥇/g, '1°')
+                    .replace(/🥈/g, '2°')
+                    .replace(/🥉/g, '3°')
+                    .replace(/📝/g, '[NOTE]')
+                    .replace(/⭐/g, '[STAR]')
+                    .replace(/⚙️/g, '*')
+                    .replace(/€/g, 'EUR ')
+                    .replace(/à/g, 'a\'')
+                    .replace(/è/g, 'e\'')
+                    .replace(/é/g, 'e\'')
+                    .replace(/ì/g, 'i\'')
+                    .replace(/ò/g, 'o\'')
+                    .replace(/ù/g, 'u\'');
+            }
+
+            // Get current date and calculation mode
+            const currentDate = new Date().toLocaleDateString('it-IT');
+            const calculationMode = document.getElementById('calculationMode').value;
+            const modeText = calculationMode === 'custom' ? 'Personalizzate' : 'Default';
+
+            // Calculate totals
+            const totalSales = pivotData.reduce((sum, shop) => sum + shop.totalSales, 0);
+            const totalCommission = pivotData.reduce((sum, shop) => sum + shop.commission, 0);
+            const totalOperators = pivotData.reduce((sum, shop) => sum + shop.operatorCount, 0);
+            const totalShops = pivotData.length;
+
+            // PDF Header
+            doc.setFontSize(20);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[CHART] ANALISI VENDITE - REPORT DETTAGLIATO'), 105, 20, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(cleanText(`Data Generazione: ${currentDate}`), 20, 30);
+            doc.text(cleanText(`Modalita\' Calcolo: Percentuali ${modeText}`), 20, 36);
+
+            // Summary Statistics
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[TREND] RIEPILOGO GENERALE'), 20, 50);
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const summaryY = 58;
+            doc.text(cleanText(`Negozi Analizzati: ${totalShops}`), 20, summaryY);
+            doc.text(cleanText(`Operatori Totali: ${totalOperators}`), 20, summaryY + 6);
+            doc.text(cleanText(`Venduto Totale: EUR ${totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 20, summaryY + 12);
+            doc.text(cleanText(`Provvigioni Totali: EUR ${totalCommission.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 20, summaryY + 18);
+
+            // Line separator
+            doc.setLineWidth(0.5);
+            doc.line(20, summaryY + 25, 190, summaryY + 25);
+
+            let currentY = summaryY + 35;
+
+            // TOP 10 Global Performers Section
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[STAR] TOP 10 VENDITORI GLOBALI'), 20, currentY);
+            currentY += 10;
+
+            // Collect all operators from all shops for global ranking
+            const allOperators = [];
+            pivotData.forEach(shop => {
+                shop.operators.forEach(operator => {
+                    allOperators.push({
+                        operatore: operator.operatore,
+                        shopCode: shop.shop,
+                        shopName: getShopDisplayName(shop.shop),
+                        totalSales: operator.totalSales,
+                        commission: operator.commission,
+                        rate: operator.rate,
+                        isCustomRate: operator.isCustomRate,
+                        transactions: operator.transactions
+                    });
+                });
+            });
+
+            // Sort by total sales and take top 10
+            const top10Global = allOperators
+                .sort((a, b) => b.totalSales - a.totalSales)
+                .slice(0, 10);
+
+            // Create TOP 10 table data
+            const top10TableData = [];
+            top10Global.forEach((operator, index) => {
+                const position = index + 1;
+                let positionDisplay = `${position}°`;
+                if (position === 1) positionDisplay = `1° [GOLD]`;
+                else if (position === 2) positionDisplay = `2° [SILVER]`;
+                else if (position === 3) positionDisplay = `3° [BRONZE]`;
+
+                const rateDisplay = operator.isCustomRate ?
+                    `${(operator.rate * 100).toFixed(2)}% *` :
+                    `${(operator.rate * 100).toFixed(2)}%`;
+
+                top10TableData.push([
+                    positionDisplay,
+                    cleanText(operator.operatore),
+                    cleanText(operator.shopName),
+                    rateDisplay,
+                    `EUR ${operator.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    `EUR ${operator.commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    operator.transactions.toString()
+                ]);
+            });
+
+            // Add TOP 10 table
+            doc.autoTable({
+                startY: currentY,
+                head: [['Pos.', 'Operatore', 'Negozio', '% Rate', 'Venduto (EUR)', 'Provvigione (EUR)', 'Trans.']],
+                body: top10TableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [255, 193, 7], // Golden color for global ranking
+                    textColor: [0, 0, 0],
+                    fontSize: 9,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 20 }, // Position
+                    1: { cellWidth: 35 }, // Operatore
+                    2: { cellWidth: 30 }, // Negozio
+                    3: { halign: 'center', cellWidth: 18 }, // Rate
+                    4: { halign: 'right', cellWidth: 30 }, // Venduto
+                    5: { halign: 'right', cellWidth: 30 }, // Provvigione
+                    6: { halign: 'center', cellWidth: 15 } // Transazioni
+                },
+                margin: { left: 20, right: 20 },
+                didDrawCell: function (data) {
+                    // Highlight top 3 global performers
+                    if (data.section === 'body') {
+                        const rowIndex = data.row.index;
+                        if (rowIndex === 0) {
+                            data.cell.styles.fillColor = [255, 215, 0, 0.5]; // Gold
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (rowIndex === 1) {
+                            data.cell.styles.fillColor = [192, 192, 192, 0.5]; // Silver
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (rowIndex === 2) {
+                            data.cell.styles.fillColor = [205, 127, 50, 0.5]; // Bronze
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                }
+            });
+
+            currentY = doc.lastAutoTable.finalY + 20;
+
+            // Add some info about the global ranking
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'italic');
+            doc.text(cleanText('Nota: Classifica basata sul venduto totale di ciascun operatore'), 20, currentY);
+            currentY += 15;
+
+            // Line separator before shop details
+            doc.setLineWidth(0.5);
+            doc.line(20, currentY, 190, currentY);
+            currentY += 10;
+
+            // Iterate through each shop
+            pivotData.forEach((shop, shopIndex) => {
+                // Check if we need a new page
+                if (currentY > 250) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+
+                const shopDisplayName = getShopDisplayName(shop.shop);
+
+                // Shop Header
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text(cleanText(`[SHOP] ${shopDisplayName}`), 20, currentY);
+
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                doc.text(cleanText(`${shop.operatorCount} operatori - ${shop.transactions} transazioni`), 20, currentY + 6);
+                doc.text(cleanText(`Venduto: EUR ${shop.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})} - ` +
+                         `Provvigioni: EUR ${shop.commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 20, currentY + 12);
+
+                currentY += 20;
+
+                // Operators table for this shop
+                const tableData = [];
+                shop.operators.forEach((operator, index) => {
+                    const position = index === 0 ? '1°' : index === 1 ? '2°' : index === 2 ? '3°' : `${index + 1}°`;
+                    const rateDisplay = operator.isCustomRate ? `${(operator.rate * 100).toFixed(2)}% *` : `${(operator.rate * 100).toFixed(2)}%`;
+
+                    tableData.push([
+                        position,
+                        cleanText(operator.operatore),
+                        rateDisplay,
+                        `EUR ${operator.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                        `EUR ${operator.commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                        `${operator.percentageInShop.toFixed(2)}%`,
+                        operator.transactions.toString()
+                    ]);
+                });
+
+                // Auto table for operators
+                doc.autoTable({
+                    startY: currentY,
+                    head: [['Pos.', 'Operatore', '% Rate', 'Venduto (EUR)', 'Provvigione (EUR)', '% Negozio', 'Trans.']],
+                    body: tableData,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [76, 175, 80],
+                        textColor: [255, 255, 255],
+                        fontSize: 8,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    columnStyles: {
+                        0: { halign: 'center', cellWidth: 15 }, // Position
+                        1: { cellWidth: 40 }, // Operatore
+                        2: { halign: 'center', cellWidth: 20 }, // Rate
+                        3: { halign: 'right', cellWidth: 25 }, // Venduto
+                        4: { halign: 'right', cellWidth: 25 }, // Provvigione
+                        5: { halign: 'center', cellWidth: 20 }, // % Negozio
+                        6: { halign: 'center', cellWidth: 15 } // Transazioni
+                    },
+                    margin: { left: 20, right: 20 },
+                    didDrawCell: function (data) {
+                        // Highlight top 3 performers
+                        if (data.section === 'body') {
+                            const rowIndex = data.row.index;
+                            if (rowIndex === 0) {
+                                doc.setFillColor(255, 215, 0, 0.3); // Gold
+                            } else if (rowIndex === 1) {
+                                doc.setFillColor(192, 192, 192, 0.3); // Silver
+                            } else if (rowIndex === 2) {
+                                doc.setFillColor(205, 127, 50, 0.3); // Bronze
+                            }
+                        }
+                    }
+                });
+
+                currentY = doc.lastAutoTable.finalY + 10;
+
+                // Add some spacing between shops
+                if (shopIndex < pivotData.length - 1) {
+                    currentY += 5;
+                }
+            });
+
+            // Footer with legend
+            doc.addPage();
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[NOTE] LEGENDA E NOTE'), 20, 30);
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text(cleanText('* = Percentuale personalizzata applicata'), 20, 45);
+            doc.text(cleanText('1° 2° 3° = Top 3 performers per negozio'), 20, 52);
+            doc.text(cleanText('[GOLD] [SILVER] [BRONZE] = Top 3 venditori globali'), 20, 59);
+            doc.text(cleanText('% Negozio = Percentuale delle vendite dell\'operatore sul totale del negozio'), 20, 66);
+            doc.text(cleanText('[SHOP] = Indica sezione negozio'), 20, 73);
+            doc.text(cleanText('[STAR] = Classifica globale venditori'), 20, 80);
+            doc.text(cleanText('[CHART] = Report di analisi vendite'), 20, 87);
+            doc.text(cleanText('EUR = Valuta Euro'), 20, 94);
+
+            doc.setFontSize(8);
+            doc.setTextColor(128);
+            doc.text(cleanText('Generato automaticamente dall\'Analizzatore Vendite'), 105, 280, { align: 'center' });
+
+            // Generate filename with current date
+            const filename = `analisi-vendite-${new Date().toISOString().split('T')[0]}.pdf`;
+
+            // Save the PDF
+            doc.save(filename);
+
+            // Show success message
+            setTimeout(() => {
+                alert(`Report PDF generato con successo!\n\nFile: ${filename}\n\nDettagli inclusi:\n• ${totalShops} negozi analizzati\n• ${totalOperators} operatori\n• Vendite totali: EUR ${totalSales.toLocaleString('it-IT')}\n• Provvigioni ${modeText.toLowerCase()}`);
+            }, 500);
         }
     </script>
 </body>
