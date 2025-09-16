@@ -419,6 +419,147 @@
                 min-width: 100px;
             }
         }
+
+        /* Timeline Mode Styles */
+        .timeline-summary {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .timeline-metric {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(248, 249, 250, 0.5);
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .timeline-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .timeline-label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .timeline-trend {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(248, 249, 250, 0.5);
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .trend-indicator {
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .timeline-mode .shop-header {
+            background: linear-gradient(135deg, #4A90E2 0%, #5B9BD5 100%);
+            color: white;
+        }
+
+        .timeline-mode .shop-name {
+            color: white;
+        }
+
+        .timeline-mode .shop-summary {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .timeline-mode .expand-icon {
+            color: white;
+        }
+
+        .timeline-chart-container {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .mini-chart {
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 8px;
+            height: 120px;
+            padding: 20px;
+            background: white;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .chart-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 30px;
+        }
+
+        .chart-column {
+            background: linear-gradient(to top, #4A90E2, #5B9BD5);
+            width: 24px;
+            border-radius: 3px 3px 0 0;
+            min-height: 5px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .chart-column:hover {
+            background: linear-gradient(to top, #357ABD, #4682B4);
+            transform: scaleY(1.1);
+        }
+
+        .chart-label {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+            text-align: center;
+            transform: rotate(-45deg);
+            transform-origin: center;
+        }
+
+        /* Timeline responsive */
+        @media (max-width: 768px) {
+            .timeline-summary {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .mini-chart {
+                gap: 4px;
+                padding: 15px 10px;
+            }
+
+            .chart-bar {
+                min-width: 20px;
+            }
+
+            .chart-column {
+                width: 18px;
+            }
+
+            .chart-label {
+                font-size: 9px;
+            }
+        }
         .expand-icon {
             font-size: 20px;
             transition: transform 0.3s ease;
@@ -672,9 +813,10 @@
                 </div>
                 <div class="control-group">
                     <label>📊 Modalità Analisi</label>
-                    <select id="analysisMode" onchange="toggleComparisonMode()">
+                    <select id="analysisMode" onchange="toggleAnalysisMode()">
                         <option value="single">Singolo Periodo</option>
                         <option value="compare">Confronta Periodi</option>
+                        <option value="timeline">Timeline Evolution</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -1040,8 +1182,8 @@
             }
         }
 
-        // Toggle between single and comparison mode
-        function toggleComparisonMode() {
+        // Toggle between analysis modes
+        function toggleAnalysisMode() {
             const analysisMode = document.getElementById('analysisMode').value;
             const singleGroup = document.getElementById('singlePeriodGroup');
             const periodAGroup = document.getElementById('periodAGroup');
@@ -1054,7 +1196,13 @@
 
                 // Populate comparison period selectors
                 populateComparisonPeriods();
+            } else if (analysisMode === 'timeline') {
+                // Timeline mode - hide all period filters
+                singleGroup.classList.add('hidden');
+                periodAGroup.classList.add('hidden');
+                periodBGroup.classList.add('hidden');
             } else {
+                // Single mode
                 singleGroup.classList.remove('hidden');
                 periodAGroup.classList.add('hidden');
                 periodBGroup.classList.add('hidden');
@@ -1453,6 +1601,9 @@
             if (analysisMode === 'compare') {
                 processComparisonData();
                 return;
+            } else if (analysisMode === 'timeline') {
+                processTimelineData();
+                return;
             }
 
             // Single period mode (existing logic)
@@ -1716,6 +1867,115 @@
             return comparisonData.sort((a, b) => Math.abs(b.salesGrowth) - Math.abs(a.salesGrowth));
         }
 
+        // Process timeline evolution data
+        function processTimelineData() {
+            const calculationMode = document.getElementById('calculationMode').value;
+            const defaultRate = parseFloat(document.getElementById('defaultRate').value) / 100;
+            const shopFilter = document.getElementById('shopFilter').value;
+
+            // Get all periods and sort them
+            const periodsFound = new Set();
+            rawData.forEach(record => {
+                if (record.periodo !== 'SCONOSCIUTO') {
+                    periodsFound.add(record.periodo);
+                }
+            });
+
+            if (periodsFound.size < 2) {
+                alert('⚠️ Servono almeno 2 periodi per la vista Timeline!');
+                return;
+            }
+
+            const sortedPeriods = Array.from(periodsFound).sort();
+
+            // Process data for each period
+            const timelineData = {};
+
+            sortedPeriods.forEach(periodo => {
+                let periodData = rawData.filter(r => r.periodo === periodo);
+
+                if (shopFilter) {
+                    periodData = periodData.filter(r => r.codDep === shopFilter);
+                }
+
+                const result = processDataForPeriod(periodData, calculationMode, defaultRate, periodo);
+                timelineData[periodo] = result;
+            });
+
+            // Create timeline visualization data
+            pivotData = createTimelineVisualizationData(timelineData, sortedPeriods);
+
+            // Set filter info for timeline
+            let filterInfo = `Timeline Evolution (${sortedPeriods.length} periodi) • `;
+            if (shopFilter) {
+                const shopName = getShopDisplayName(shopFilter);
+                filterInfo += `Negozio: ${shopName} • `;
+            }
+
+            window.currentFilterInfo = filterInfo;
+            window.isTimelineMode = true;
+            window.timelinePeriods = sortedPeriods;
+
+            renderResults();
+        }
+
+        // Create timeline visualization data structure
+        function createTimelineVisualizationData(timelineData, periods) {
+            const timelineVisualization = [];
+
+            // Get all unique shops from all periods
+            const allShops = new Set();
+            Object.values(timelineData).forEach(periodData => {
+                periodData.forEach(shop => allShops.add(shop.shop));
+            });
+
+            Array.from(allShops).forEach(shopCode => {
+                const shopTimeline = {
+                    shop: shopCode,
+                    periods: periods,
+                    data: {}
+                };
+
+                periods.forEach(periodo => {
+                    const periodData = timelineData[periodo] || [];
+                    const shopInPeriod = periodData.find(s => s.shop === shopCode);
+
+                    shopTimeline.data[periodo] = {
+                        sales: shopInPeriod ? shopInPeriod.totalSales : 0,
+                        commission: shopInPeriod ? shopInPeriod.commission : 0,
+                        operators: shopInPeriod ? shopInPeriod.operatorCount : 0,
+                        transactions: shopInPeriod ? shopInPeriod.transactions : 0,
+                        topOperators: shopInPeriod ? shopInPeriod.operators.slice(0, 3) : []
+                    };
+                });
+
+                // Calculate trends
+                const salesValues = periods.map(p => shopTimeline.data[p].sales);
+                const avgGrowth = calculateAverageGrowth(salesValues);
+                shopTimeline.avgGrowth = avgGrowth;
+                shopTimeline.totalSales = salesValues.reduce((sum, val) => sum + val, 0);
+
+                timelineVisualization.push(shopTimeline);
+            });
+
+            return timelineVisualization.sort((a, b) => b.totalSales - a.totalSales);
+        }
+
+        // Helper function to calculate average growth
+        function calculateAverageGrowth(values) {
+            if (values.length < 2) return 0;
+
+            const growthRates = [];
+            for (let i = 1; i < values.length; i++) {
+                if (values[i - 1] > 0) {
+                    const growth = ((values[i] - values[i - 1]) / values[i - 1]) * 100;
+                    growthRates.push(growth);
+                }
+            }
+
+            return growthRates.length > 0 ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length : 0;
+        }
+
         function renderResults() {
             renderStats();
             renderPivotTable();
@@ -1785,6 +2045,57 @@
                         <div>Crescita Provvigioni</div>
                     </div>
                 `;
+            } else if (window.isTimelineMode) {
+                // Timeline mode stats
+                const totalShops = pivotData.length;
+                const periods = window.timelinePeriods;
+
+                // Calculate totals across all periods
+                let totalSalesAllPeriods = 0;
+                let totalCommissionAllPeriods = 0;
+
+                pivotData.forEach(shop => {
+                    totalSalesAllPeriods += shop.totalSales;
+                    periods.forEach(periodo => {
+                        totalCommissionAllPeriods += shop.data[periodo].commission;
+                    });
+                });
+
+                // Find best and worst growth performers
+                const bestGrowthShop = pivotData.reduce((best, current) =>
+                    current.avgGrowth > best.avgGrowth ? current : best, pivotData[0]);
+                const worstGrowthShop = pivotData.reduce((worst, current) =>
+                    current.avgGrowth < worst.avgGrowth ? current : worst, pivotData[0]);
+
+                const avgGrowthIcon = bestGrowthShop.avgGrowth >= 0 ? '📈' : '📉';
+                const avgGrowthColor = bestGrowthShop.avgGrowth >= 0 ? '#28a745' : '#dc3545';
+
+                document.getElementById('stats').innerHTML = filterDisplay + `
+                    <div class="stat-card">
+                        <div class="stat-value">${totalShops}</div>
+                        <div>Negozi Analizzati</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${periods.length}</div>
+                        <div>Periodi Timeline</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalSalesAllPeriods.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Venduto Cumulativo</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">€${totalCommissionAllPeriods.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                        <div>Provvigioni ${modeText}</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, ${avgGrowthColor}, ${avgGrowthColor}cc);">
+                        <div class="stat-value">${avgGrowthIcon} ${bestGrowthShop.avgGrowth > 0 ? '+' : ''}${bestGrowthShop.avgGrowth.toFixed(1)}%</div>
+                        <div>Miglior Crescita Media</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${getShopDisplayName(bestGrowthShop.shop)}</div>
+                        <div>Top Performer</div>
+                    </div>
+                `;
             } else {
                 // Single period mode (existing logic)
                 const totalSales = pivotData.reduce((sum, shop) => sum + shop.totalSales, 0);
@@ -1817,6 +2128,8 @@
         function renderPivotTable() {
             if (window.isComparisonMode) {
                 renderComparisonPivotTable();
+            } else if (window.isTimelineMode) {
+                renderTimelinePivotTable();
             } else {
                 renderSinglePeriodPivotTable();
             }
@@ -2060,6 +2373,141 @@
             container.innerHTML = html;
         }
 
+        function renderTimelinePivotTable() {
+            const container = document.getElementById('pivotContainer');
+            if (pivotData.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">Nessun dato disponibile</p>';
+                return;
+            }
+
+            const periods = window.timelinePeriods;
+
+            let html = '';
+            pivotData.forEach((shop, shopIndex) => {
+                const shopDisplayName = getShopDisplayName(shop.shop);
+                const avgGrowthColor = shop.avgGrowth >= 0 ? '#28a745' : '#dc3545';
+                const avgGrowthIcon = shop.avgGrowth >= 0 ? '📈' : '📉';
+
+                html += `
+                    <div class="shop-row timeline-mode" data-shop="${shop.shop}" data-shop-name="${shopDisplayName.toLowerCase()}">
+                        <div class="shop-header" onclick="toggleShop(${shopIndex})">
+                            <div class="shop-info">
+                                <div class="shop-name">🏪 ${shopDisplayName}</div>
+                                <div class="shop-summary">
+                                    ${periods.length} periodi • Trend medio: ${avgGrowthIcon} ${shop.avgGrowth > 0 ? '+' : ''}${shop.avgGrowth.toFixed(1)}%
+                                </div>
+                            </div>
+                            <div class="timeline-summary" style="color: ${avgGrowthColor};">
+                                <div class="timeline-metric">
+                                    <div class="timeline-value">€${shop.totalSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
+                                    <div class="timeline-label">Totale Periodo</div>
+                                </div>
+                                <div class="timeline-trend">
+                                    <div class="trend-indicator" style="color: ${avgGrowthColor};">
+                                        ${avgGrowthIcon} ${shop.avgGrowth > 0 ? '+' : ''}${shop.avgGrowth.toFixed(1)}%
+                                    </div>
+                                    <div class="timeline-label">Crescita Media</div>
+                                </div>
+                                <div class="expand-icon">▶</div>
+                            </div>
+                        </div>
+                        <div class="operators-table">
+                            <div class="timeline-chart-container">
+                                <h4 style="text-align: center; margin: 15px 0;">📊 Andamento Temporale - ${shopDisplayName}</h4>
+                                <div class="timeline-chart" id="chart-${shopIndex}"></div>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: center;">📅 Periodo</th>
+                                        <th>💰 Vendite (€)</th>
+                                        <th>🏆 Provvigioni (€)</th>
+                                        <th>👥 Operatori</th>
+                                        <th>🔢 Transazioni</th>
+                                        <th>📈 Crescita vs Prec.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                periods.forEach((periodo, periodIndex) => {
+                    const data = shop.data[periodo];
+                    const [year, month] = periodo.split('-');
+                    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
+                                      'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                    const monthName = monthNames[parseInt(month) - 1];
+
+                    // Calculate growth vs previous period
+                    let growth = 0;
+                    let growthDisplay = '-';
+                    if (periodIndex > 0) {
+                        const prevPeriod = periods[periodIndex - 1];
+                        const prevData = shop.data[prevPeriod];
+                        if (prevData.sales > 0) {
+                            growth = ((data.sales - prevData.sales) / prevData.sales) * 100;
+                            const growthIcon = growth >= 0 ? '📈' : '📉';
+                            const growthColor = growth >= 0 ? '#28a745' : '#dc3545';
+                            growthDisplay = `<span style="color: ${growthColor}; font-weight: bold;">${growthIcon} ${growth > 0 ? '+' : ''}${growth.toFixed(1)}%</span>`;
+                        }
+                    }
+
+                    html += `
+                        <tr ${data.sales === 0 ? 'style="opacity: 0.6;"' : ''}>
+                            <td class="text-center"><strong>${monthName} ${year}</strong></td>
+                            <td class="currency">${data.sales.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="currency">${data.commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="text-center">${data.operators}</td>
+                            <td class="text-center">${data.transactions}</td>
+                            <td class="text-center">${growthDisplay}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+
+            // Generate mini charts for each shop
+            pivotData.forEach((shop, shopIndex) => {
+                createMiniTimelineChart(shop, shopIndex);
+            });
+        }
+
+        // Create mini timeline chart for each shop
+        function createMiniTimelineChart(shop, shopIndex) {
+            const chartContainer = document.getElementById(`chart-${shopIndex}`);
+            if (!chartContainer) return;
+
+            const periods = window.timelinePeriods;
+            const salesData = periods.map(p => shop.data[p].sales);
+            const maxSales = Math.max(...salesData);
+
+            let chartHtml = '<div class="mini-chart">';
+
+            periods.forEach((periodo, index) => {
+                const data = shop.data[periodo];
+                const [year, month] = periodo.split('-');
+                const monthNames = ['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', 'D'];
+                const monthName = monthNames[parseInt(month) - 1];
+                const height = maxSales > 0 ? (data.sales / maxSales) * 80 : 0;
+
+                chartHtml += `
+                    <div class="chart-bar">
+                        <div class="chart-column" style="height: ${height}px;" title="€${data.sales.toLocaleString('it-IT')}"></div>
+                        <div class="chart-label">${monthName}${year.slice(-2)}</div>
+                    </div>
+                `;
+            });
+
+            chartHtml += '</div>';
+            chartContainer.innerHTML = chartHtml;
+        }
+
         function toggleShop(shopIndex) {
             const shopRow = document.querySelectorAll('.shop-row')[shopIndex];
             const isExpanded = shopRow.classList.contains('expanded');
@@ -2213,6 +2661,15 @@
                 return;
             }
 
+            if (window.isComparisonMode) {
+                exportComparisonToPDF();
+            } else {
+                exportSinglePeriodToPDF();
+            }
+        }
+
+        // Single period PDF export (existing functionality)
+        function exportSinglePeriodToPDF() {
             // Initialize jsPDF
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
@@ -2506,6 +2963,289 @@
             // Show success message
             setTimeout(() => {
                 alert(`Report PDF generato con successo!\n\nFile: ${filename}\n\nDettagli inclusi:\n• ${totalShops} negozi analizzati\n• ${totalOperators} operatori\n• Vendite totali: EUR ${totalSales.toLocaleString('it-IT')}\n• Provvigioni ${modeText.toLowerCase()}`);
+            }, 500);
+        }
+
+        // Comparison mode PDF export
+        function exportComparisonToPDF() {
+            // Initialize jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            // Helper function to clean text from problematic characters
+            function cleanText(text) {
+                return text
+                    .replace(/📊/g, '[CHART]')
+                    .replace(/📈/g, '[TREND_UP]')
+                    .replace(/📉/g, '[TREND_DOWN]')
+                    .replace(/🏪/g, '[SHOP]')
+                    .replace(/🥇/g, '1°')
+                    .replace(/🥈/g, '2°')
+                    .replace(/🥉/g, '3°')
+                    .replace(/📝/g, '[NOTE]')
+                    .replace(/⭐/g, '[STAR]')
+                    .replace(/⚙️/g, '*')
+                    .replace(/€/g, 'EUR ')
+                    .replace(/à/g, 'a\'')
+                    .replace(/è/g, 'e\'')
+                    .replace(/é/g, 'e\'')
+                    .replace(/ì/g, 'i\'')
+                    .replace(/ò/g, 'o\'')
+                    .replace(/ù/g, 'u\'');
+            }
+
+            // Get current date and calculation mode
+            const currentDate = new Date().toLocaleDateString('it-IT');
+            const calculationMode = document.getElementById('calculationMode').value;
+            const modeText = calculationMode === 'custom' ? 'Personalizzate' : 'Default';
+
+            // Get period information
+            const periodA = window.periodA;
+            const periodB = window.periodB;
+            const [yearA, monthA] = periodA.split('-');
+            const [yearB, monthB] = periodB.split('-');
+            const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
+                              'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+            const monthNameA = monthNames[parseInt(monthA) - 1];
+            const monthNameB = monthNames[parseInt(monthB) - 1];
+
+            // Calculate comparison totals
+            const totalSalesA = pivotData.reduce((sum, shop) => sum + shop.salesA, 0);
+            const totalSalesB = pivotData.reduce((sum, shop) => sum + shop.salesB, 0);
+            const totalCommissionA = pivotData.reduce((sum, shop) => sum + shop.commissionA, 0);
+            const totalCommissionB = pivotData.reduce((sum, shop) => sum + shop.commissionB, 0);
+            const totalShops = pivotData.length;
+
+            const salesGrowth = totalSalesA > 0 ? ((totalSalesB - totalSalesA) / totalSalesA) * 100 : 0;
+            const commissionGrowth = totalCommissionA > 0 ? ((totalCommissionB - totalCommissionA) / totalCommissionA) * 100 : 0;
+
+            // PDF Header
+            doc.setFontSize(20);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[CHART] ANALISI COMPARATIVA VENDITE'), 105, 20, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(cleanText(`Data Generazione: ${currentDate}`), 20, 30);
+            doc.text(cleanText(`Modalita\' Calcolo: Percentuali ${modeText}`), 20, 36);
+            doc.text(cleanText(`Confronto: ${monthNameA} ${yearA} vs ${monthNameB} ${yearB}`), 20, 42);
+
+            // Summary Statistics
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[TREND_UP] RIEPILOGO COMPARATIVO'), 20, 58);
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const summaryY = 66;
+
+            doc.text(cleanText(`Negozi Analizzati: ${totalShops}`), 20, summaryY);
+            doc.text(cleanText(`Periodo A (${monthNameA} ${yearA}):`), 20, summaryY + 8);
+            doc.text(cleanText(`  • Vendite: EUR ${totalSalesA.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 25, summaryY + 14);
+            doc.text(cleanText(`  • Provvigioni: EUR ${totalCommissionA.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 25, summaryY + 20);
+
+            doc.text(cleanText(`Periodo B (${monthNameB} ${yearB}):`), 20, summaryY + 28);
+            doc.text(cleanText(`  • Vendite: EUR ${totalSalesB.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 25, summaryY + 34);
+            doc.text(cleanText(`  • Provvigioni: EUR ${totalCommissionB.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 25, summaryY + 40);
+
+            // Growth indicators
+            const salesTrendIcon = salesGrowth >= 0 ? '[TREND_UP]' : '[TREND_DOWN]';
+            const commissionTrendIcon = commissionGrowth >= 0 ? '[TREND_UP]' : '[TREND_DOWN]';
+
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText(`CRESCITA VENDITE: ${salesTrendIcon} ${salesGrowth > 0 ? '+' : ''}${salesGrowth.toFixed(1)}%`), 20, summaryY + 50);
+            doc.text(cleanText(`CRESCITA PROVVIGIONI: ${commissionTrendIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(1)}%`), 20, summaryY + 56);
+
+            // Line separator
+            doc.setLineWidth(0.5);
+            doc.line(20, summaryY + 65, 190, summaryY + 65);
+
+            let currentY = summaryY + 75;
+
+            // Summary table for all shops comparison
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[SHOP] CONFRONTO PER NEGOZIO'), 20, currentY);
+            currentY += 10;
+
+            // Create comparison table data
+            const comparisonTableData = [];
+            pivotData.forEach((shop, index) => {
+                const shopDisplayName = getShopDisplayName(shop.shop);
+                const salesGrowthShop = shop.salesA > 0 ? ((shop.salesB - shop.salesA) / shop.salesA) * 100 : (shop.salesB > 0 ? 100 : 0);
+                const trendIcon = salesGrowthShop >= 0 ? '[TREND_UP]' : '[TREND_DOWN]';
+
+                comparisonTableData.push([
+                    cleanText(shopDisplayName),
+                    `EUR ${shop.salesA.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    `EUR ${shop.salesB.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    cleanText(`${trendIcon} ${salesGrowthShop > 0 ? '+' : ''}${salesGrowthShop.toFixed(1)}%`),
+                    `EUR ${shop.commissionA.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    `EUR ${shop.commissionB.toLocaleString('it-IT', {minimumFractionDigits: 2})}`
+                ]);
+            });
+
+            // Add comparison table
+            doc.autoTable({
+                startY: currentY,
+                head: [[
+                    'Negozio',
+                    `Vendite ${monthNameA}`,
+                    `Vendite ${monthNameB}`,
+                    'Crescita',
+                    `Prov. ${monthNameA}`,
+                    `Prov. ${monthNameB}`
+                ]],
+                body: comparisonTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [76, 175, 80], // Green for comparison
+                    textColor: [255, 255, 255],
+                    fontSize: 9,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                columnStyles: {
+                    0: { cellWidth: 35 }, // Negozio
+                    1: { halign: 'right', cellWidth: 28 }, // Vendite A
+                    2: { halign: 'right', cellWidth: 28 }, // Vendite B
+                    3: { halign: 'center', cellWidth: 25 }, // Crescita
+                    4: { halign: 'right', cellWidth: 24 }, // Prov A
+                    5: { halign: 'right', cellWidth: 24 } // Prov B
+                },
+                margin: { left: 20, right: 20 },
+                didDrawCell: function (data) {
+                    // Color code growth cells
+                    if (data.section === 'body' && data.column.index === 3) {
+                        const cellText = data.cell.text[0];
+                        if (cellText.includes('[TREND_UP]')) {
+                            data.cell.styles.textColor = [34, 139, 34]; // Dark green
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (cellText.includes('[TREND_DOWN]')) {
+                            data.cell.styles.textColor = [220, 20, 60]; // Crimson
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                }
+            });
+
+            currentY = doc.lastAutoTable.finalY + 15;
+
+            // Top performers comparison section
+            if (currentY > 220) {
+                doc.addPage();
+                currentY = 20;
+            }
+
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[STAR] TOP PERFORMERS COMPARISON'), 20, currentY);
+            currentY += 10;
+
+            // Get top performers from both periods
+            const topPerformersA = [];
+            const topPerformersB = [];
+
+            pivotData.forEach(shop => {
+                if (shop.operatorsA) {
+                    shop.operatorsA.slice(0, 3).forEach(op => {
+                        topPerformersA.push({
+                            operatore: op.operatore,
+                            shop: getShopDisplayName(shop.shop),
+                            sales: op.totalSales,
+                            commission: op.commission
+                        });
+                    });
+                }
+                if (shop.operatorsB) {
+                    shop.operatorsB.slice(0, 3).forEach(op => {
+                        topPerformersB.push({
+                            operatore: op.operatore,
+                            shop: getShopDisplayName(shop.shop),
+                            sales: op.totalSales,
+                            commission: op.commission
+                        });
+                    });
+                }
+            });
+
+            // Sort and take top 10 for each period
+            topPerformersA.sort((a, b) => b.sales - a.sales);
+            topPerformersB.sort((a, b) => b.sales - a.sales);
+
+            const top10A = topPerformersA.slice(0, 10);
+            const top10B = topPerformersB.slice(0, 10);
+
+            // Create side-by-side top performers table
+            const topPerformersTableData = [];
+            const maxRows = Math.max(top10A.length, top10B.length);
+
+            for (let i = 0; i < maxRows; i++) {
+                const performerA = top10A[i];
+                const performerB = top10B[i];
+
+                topPerformersTableData.push([
+                    performerA ? `${i + 1}°` : '',
+                    performerA ? cleanText(performerA.operatore) : '',
+                    performerA ? `EUR ${performerA.sales.toLocaleString('it-IT', {minimumFractionDigits: 2})}` : '',
+                    performerB ? `${i + 1}°` : '',
+                    performerB ? cleanText(performerB.operatore) : '',
+                    performerB ? `EUR ${performerB.sales.toLocaleString('it-IT', {minimumFractionDigits: 2})}` : ''
+                ]);
+            }
+
+            // Add top performers comparison table
+            doc.autoTable({
+                startY: currentY,
+                head: [[
+                    'Pos.', `Top ${monthNameA}`, 'Vendite',
+                    'Pos.', `Top ${monthNameB}`, 'Vendite'
+                ]],
+                body: topPerformersTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [255, 152, 0], // Orange for top performers
+                    textColor: [255, 255, 255],
+                    fontSize: 9,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 15 }, // Pos A
+                    1: { cellWidth: 40 }, // Name A
+                    2: { halign: 'right', cellWidth: 30 }, // Sales A
+                    3: { halign: 'center', cellWidth: 15 }, // Pos B
+                    4: { cellWidth: 40 }, // Name B
+                    5: { halign: 'right', cellWidth: 30 } // Sales B
+                },
+                margin: { left: 20, right: 20 }
+            });
+
+            currentY = doc.lastAutoTable.finalY + 15;
+
+            // Add analysis notes
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'italic');
+            doc.text(cleanText('Note:'), 20, currentY);
+            doc.text(cleanText('• [TREND_UP] indica crescita positiva, [TREND_DOWN] indica decrescita'), 20, currentY + 6);
+            doc.text(cleanText('• La classifica e\' basata sul venduto totale per ogni operatore'), 20, currentY + 12);
+            doc.text(cleanText('• * indica percentuali personalizzate'), 20, currentY + 18);
+
+            // Generate filename with comparison info
+            const filename = `confronto-vendite-${monthNameA}${yearA}-vs-${monthNameB}${yearB}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+            // Save the PDF
+            doc.save(filename);
+
+            // Show success message
+            setTimeout(() => {
+                alert(`Report Comparativo PDF generato con successo!\n\nFile: ${filename}\n\nConfronto incluso:\n• Periodo A: ${monthNameA} ${yearA} (EUR ${totalSalesA.toLocaleString('it-IT')})\n• Periodo B: ${monthNameB} ${yearB} (EUR ${totalSalesB.toLocaleString('it-IT')})\n• Crescita Vendite: ${salesGrowth.toFixed(1)}%\n• Crescita Provvigioni: ${commissionGrowth.toFixed(1)}%`);
             }, 500);
         }
     </script>
