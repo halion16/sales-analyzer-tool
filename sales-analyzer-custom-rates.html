@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizzatore Vendite - Percentuali Personalizzate</title>
+    <title>Analizzatore Vendite - COMPLETO FUNZIONANTE</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <!-- jsPDF library for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -230,25 +233,51 @@
         /* Stats Cards */
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
         }
         .stat-card {
             background: linear-gradient(135deg, #4CAF50, #45a049);
             color: white;
-            padding: 20px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 6px;
             text-align: center;
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease;
+            position: relative;
+            cursor: help;
         }
         .stat-card:hover {
-            transform: translateY(-3px);
+            transform: translateY(-2px);
         }
         .stat-value {
-            font-size: 24px;
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+        }
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.9;
+            line-height: 1.2;
+        }
+        .stat-card .tooltip {
+            visibility: hidden;
+            background-color: rgba(0,0,0,0.9);
+            color: white;
+            text-align: left;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            width: 200px;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .stat-card:hover .tooltip {
+            visibility: visible;
         }
 
         /* Pivot Table - Same as before */
@@ -338,7 +367,7 @@
         .period-label {
             font-size: 11px;
             font-weight: bold;
-            color: #333;
+            color: #1a1a1a;
             margin-bottom: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -354,16 +383,26 @@
         .period-values div {
             font-size: 13px;
             font-weight: bold;
-            color: #333;
+            color: #1a1a1a;
         }
 
         /* Ensure better contrast for period labels */
         .period-comparison:first-child .period-label {
-            color: #1565c0;
+            color: #0d47a1;
+            font-weight: 900;
         }
 
         .period-comparison:nth-child(2) .period-label {
-            color: #ef6c00;
+            color: #bf360c;
+            font-weight: 900;
+        }
+
+        .period-comparison:first-child .period-values div {
+            color: #0d47a1;
+        }
+
+        .period-comparison:nth-child(2) .period-values div {
+            color: #bf360c;
         }
 
         .growth-indicators {
@@ -536,6 +575,38 @@
             transform-origin: center;
         }
 
+        /* Prediction visualization styles */
+        .prediction-column {
+            animation: pulse-prediction 2s infinite;
+        }
+
+        @keyframes pulse-prediction {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .prediction-label {
+            color: #495057 !important;
+            font-weight: bold;
+        }
+
+        .prediction-bar {
+            position: relative;
+        }
+
+        .prediction-bar::before {
+            content: "📈";
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+        }
+
+        .prediction-info {
+            border-left: 4px solid #007bff;
+        }
+
         /* Timeline responsive */
         @media (max-width: 768px) {
             .timeline-summary {
@@ -681,10 +752,10 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <div class="tab active" onclick="showTab('upload')">📁 Caricamento</div>
-            <div class="tab" onclick="showTab('shops')">🏪 Negozi</div>
-            <div class="tab" onclick="showTab('rates')">⚙️ Percentuali Custom</div>
-            <div class="tab" onclick="showTab('results')">📊 Risultati</div>
+            <div class="tab active" onclick="showTab('upload', event)">📁 Caricamento</div>
+            <div class="tab" onclick="showTab('shops', event)">🏪 Negozi</div>
+            <div class="tab" onclick="showTab('rates', event)">⚙️ Percentuali Custom</div>
+            <div class="tab" onclick="showTab('results', event)">📊 Risultati</div>
         </div>
 
         <!-- Tab 1: Upload -->
@@ -842,6 +913,22 @@
                     <select id="periodFilterB">
                         <option value="">Seleziona periodo B</option>
                     </select>
+                </div>
+                <div class="control-group" id="seasonalityGroup" style="display: none;">
+                    <label>🌱 Modello Stagionalità</label>
+                    <div style="margin-top: 5px;">
+                        <label style="display: block; font-weight: normal; margin-bottom: 8px;">
+                            <input type="radio" name="seasonalityMode" value="fixed" checked style="margin-right: 8px;">
+                            📊 Fattori Fissi (Moda Italiana)
+                        </label>
+                        <label style="display: block; font-weight: normal; margin-bottom: 8px;">
+                            <input type="radio" name="seasonalityMode" value="dynamic" style="margin-right: 8px;">
+                            🎯 Dinamico (dai tuoi dati)
+                        </label>
+                        <div id="seasonalityStatus" style="font-size: 11px; color: #666; margin-top: 5px;">
+                            📊 Usando fattori fissi standard
+                        </div>
+                    </div>
                 </div>
                 <div class="control-group">
                     <label>&nbsp;</label>
@@ -1188,24 +1275,117 @@
             const singleGroup = document.getElementById('singlePeriodGroup');
             const periodAGroup = document.getElementById('periodAGroup');
             const periodBGroup = document.getElementById('periodBGroup');
+            const seasonalityGroup = document.getElementById('seasonalityGroup');
 
             if (analysisMode === 'compare') {
                 singleGroup.classList.add('hidden');
                 periodAGroup.classList.remove('hidden');
                 periodBGroup.classList.remove('hidden');
+                seasonalityGroup.style.display = 'none';
 
                 // Populate comparison period selectors
                 populateComparisonPeriods();
             } else if (analysisMode === 'timeline') {
-                // Timeline mode - hide all period filters
+                // Timeline mode - hide all period filters, show seasonality controls
                 singleGroup.classList.add('hidden');
                 periodAGroup.classList.add('hidden');
                 periodBGroup.classList.add('hidden');
+                seasonalityGroup.style.display = 'block';
             } else {
                 // Single mode
                 singleGroup.classList.remove('hidden');
                 periodAGroup.classList.add('hidden');
                 periodBGroup.classList.add('hidden');
+                seasonalityGroup.style.display = 'none';
+            }
+
+            // Update seasonality status
+            updateSeasonalityStatus();
+        }
+
+        // Global variable to store dynamic seasonality
+        let dynamicSeasonalityFactors = null;
+
+        // Update seasonality status display
+        function updateSeasonalityStatus() {
+            const statusDiv = document.getElementById('seasonalityStatus');
+            const selectedMode = document.querySelector('input[name="seasonalityMode"]:checked')?.value || 'fixed';
+
+            if (selectedMode === 'fixed') {
+                statusDiv.innerHTML = '📊 Usando fattori fissi standard<br><small>Set: 0.88-1.10, Dic: 1.10</small>';
+                statusDiv.style.color = '#666';
+            } else {
+                if (dynamicSeasonalityFactors) {
+                    const periods = Object.keys(dynamicSeasonalityFactors).length;
+
+                    // Show key months preview
+                    const sept = dynamicSeasonalityFactors[9] ? dynamicSeasonalityFactors[9].toFixed(2) : 'N/A';
+                    const dec = dynamicSeasonalityFactors[12] ? dynamicSeasonalityFactors[12].toFixed(2) : 'N/A';
+
+                    statusDiv.innerHTML = `🎯 Fattori dinamici attivi (${periods} mesi)<br><small>Set: ${sept}, Dic: ${dec}</small>`;
+                    statusDiv.style.color = '#28a745';
+                } else {
+                    statusDiv.innerHTML = '⚠️ Calcola prima i fattori dinamici';
+                    statusDiv.style.color = '#dc3545';
+                }
+            }
+        }
+
+        // Calculate dynamic seasonality from historical data
+        function calculateDynamicSeasonality(allData) {
+            try {
+                console.log('🔍 Calculating dynamic seasonality from historical data...');
+
+                // Group data by month across all years and shops
+                const monthlyData = {};
+                let totalDataPoints = 0;
+
+                allData.forEach(record => {
+                    if (record.periodo && record.periodo !== 'SCONOSCIUTO' && record.amount > 0) {
+                        const [year, month] = record.periodo.split('-');
+                        const monthNum = parseInt(month);
+
+                        if (!monthlyData[monthNum]) {
+                            monthlyData[monthNum] = [];
+                        }
+                        monthlyData[monthNum].push(record.amount);
+                        totalDataPoints++;
+                    }
+                });
+
+                console.log(`📊 Found ${totalDataPoints} data points across ${Object.keys(monthlyData).length} months`);
+
+                // Calculate average for each month
+                const monthlyAverages = {};
+                Object.keys(monthlyData).forEach(month => {
+                    const monthSales = monthlyData[month];
+                    monthlyAverages[month] = monthSales.reduce((sum, val) => sum + val, 0) / monthSales.length;
+                });
+
+                // Calculate overall average
+                const overallAverage = Object.values(monthlyAverages).reduce((sum, val) => sum + val, 0) / Object.keys(monthlyAverages).length;
+
+                // Calculate seasonal factors (month average / overall average)
+                const seasonalFactors = {};
+                Object.keys(monthlyAverages).forEach(month => {
+                    let factor = monthlyAverages[month] / overallAverage;
+
+                    // Apply smoothing and constraints (0.80 to 1.20 range)
+                    factor = Math.max(0.80, Math.min(1.20, factor));
+
+                    seasonalFactors[parseInt(month)] = parseFloat(factor.toFixed(3));
+                });
+
+                console.log('🎯 Dynamic seasonal factors calculated:', seasonalFactors);
+
+                // Store globally
+                dynamicSeasonalityFactors = seasonalFactors;
+
+                return seasonalFactors;
+
+            } catch (error) {
+                console.error('❌ Error calculating dynamic seasonality:', error);
+                return null;
             }
         }
 
@@ -1243,7 +1423,7 @@
         loadSavedShopNames();
 
         // Tab functionality
-        function showTab(tabName) {
+        function showTab(tabName, event) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
@@ -1254,34 +1434,84 @@
 
             // Show selected tab
             document.getElementById(`tab-${tabName}`).classList.add('active');
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
         }
 
-        // File upload
-        document.getElementById('csvFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // Add event listeners for seasonality mode changes
+        document.addEventListener('DOMContentLoaded', function() {
+            // File upload
+            document.getElementById('csvFile').addEventListener('change', function(e) {
+                console.log('🔍 CSV Upload Event Triggered');
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const text = event.target.result;
-                parseCSV(text);
-            };
-            reader.readAsText(file);
+                const file = e.target.files[0];
+                if (!file) {
+                    console.log('❌ No file selected');
+                    return;
+                }
+
+                console.log('📁 File selected:', file.name, 'Size:', file.size, 'bytes');
+                console.log('📄 File type:', file.type);
+
+                const reader = new FileReader();
+
+                reader.onerror = function(error) {
+                    console.error('❌ FileReader error:', error);
+                    document.getElementById('debug').textContent = 'Errore nella lettura del file: ' + error;
+                };
+
+                reader.onload = function(event) {
+                    console.log('✅ File loaded successfully, length:', event.target.result.length);
+                    const text = event.target.result;
+
+                    if (!text || text.length === 0) {
+                        console.log('❌ File is empty');
+                        document.getElementById('debug').textContent = 'Il file è vuoto!';
+                        return;
+                    }
+
+                    console.log('📊 Starting CSV parsing...');
+                    parseCSV(text);
+                };
+
+                console.log('📖 Starting file read...');
+                reader.readAsText(file, 'UTF-8');
+            });
+            // Listen for seasonality mode changes
+            document.addEventListener('change', function(e) {
+                if (e.target.name === 'seasonalityMode') {
+                    updateSeasonalityStatus();
+
+                    // If switching to dynamic mode and we have data, calculate factors
+                    if (e.target.value === 'dynamic' && rawData.length > 0 && !dynamicSeasonalityFactors) {
+                        calculateDynamicSeasonality(rawData);
+                        updateSeasonalityStatus();
+                    }
+
+                    // Auto-refresh timeline results if in timeline mode (HOT SWAP)
+                    const analysisMode = document.getElementById('analysisMode').value;
+                    if (analysisMode === 'timeline' && window.isTimelineMode && pivotData.length > 0) {
+                        console.log(`🔄 Hot-swapping to ${e.target.value.toUpperCase()} seasonality mode...`);
+                        processTimelineData();
+                        renderResults();
+                    }
+                }
+            });
+
+            // Search and sort functionality
+            document.getElementById('searchInput').addEventListener('input', filterPivotTable);
+            document.getElementById('sortSelect').addEventListener('change', sortPivotTable);
+
+            // Employee search and filter functionality
+            document.getElementById('employeeSearch').addEventListener('input', filterRatesTable);
+            document.getElementById('employeeShopFilter').addEventListener('change', filterRatesTable);
+            document.getElementById('ratesFilter').addEventListener('change', filterRatesTable);
+
+            // Shop search and filter functionality
+            document.getElementById('shopSearch').addEventListener('input', filterShopsTable);
+            document.getElementById('shopDisplayFilter').addEventListener('change', filterShopsTable);
         });
-
-        // Search and sort functionality
-        document.getElementById('searchInput').addEventListener('input', filterPivotTable);
-        document.getElementById('sortSelect').addEventListener('change', sortPivotTable);
-
-        // Employee search and filter functionality
-        document.getElementById('employeeSearch').addEventListener('input', filterRatesTable);
-        document.getElementById('employeeShopFilter').addEventListener('change', filterRatesTable);
-        document.getElementById('ratesFilter').addEventListener('change', filterRatesTable);
-
-        // Shop search and filter functionality
-        document.getElementById('shopSearch').addEventListener('input', filterShopsTable);
-        document.getElementById('shopDisplayFilter').addEventListener('change', filterShopsTable);
 
         function parseCSV(text) {
             const debug = document.getElementById('debug');
@@ -1488,6 +1718,10 @@
                 // Show controls and rates table
                 document.getElementById('controls').classList.remove('hidden');
                 buildRatesTable();
+
+                // Auto-calculate dynamic seasonality factors
+                calculateDynamicSeasonality(rawData);
+                updateSeasonalityStatus();
 
                 // Auto-switch to shops tab first
                 showTab('shops');
@@ -1869,9 +2103,11 @@
 
         // Process timeline evolution data
         function processTimelineData() {
+            console.log('🔄 Starting processTimelineData');
             const calculationMode = document.getElementById('calculationMode').value;
             const defaultRate = parseFloat(document.getElementById('defaultRate').value) / 100;
             const shopFilter = document.getElementById('shopFilter').value;
+            console.log('📋 Timeline params:', { calculationMode, defaultRate, shopFilter });
 
             // Get all periods and sort them
             const periodsFound = new Set();
@@ -1880,6 +2116,7 @@
                     periodsFound.add(record.periodo);
                 }
             });
+            console.log('📅 Periods found:', Array.from(periodsFound));
 
             if (periodsFound.size < 2) {
                 alert('⚠️ Servono almeno 2 periodi per la vista Timeline!');
@@ -1904,6 +2141,21 @@
 
             // Create timeline visualization data
             pivotData = createTimelineVisualizationData(timelineData, sortedPeriods);
+
+            // PHASE 5: Generate predictions for each shop
+            pivotData.forEach(shop => {
+                const prediction = predictNextPeriod(shop);
+                const seasonalAnalysis = analyzeSeasonalTrends(shop);
+                shop.prediction = prediction;
+                shop.seasonal = seasonalAnalysis;
+            });
+
+            // Generate prediction alerts
+            const alerts = generatePredictionAlerts(pivotData.map(shop => ({
+                shop: shop.shop,
+                ...shop.prediction
+            })));
+            window.predictionAlerts = alerts;
 
             // Set filter info for timeline
             let filterInfo = `Timeline Evolution (${sortedPeriods.length} periodi) • `;
@@ -1973,7 +2225,793 @@
                 }
             }
 
-            return growthRates.length > 0 ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length : 0;
+            const avgGrowth = growthRates.length > 0 ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length : 0;
+
+            // Debug logging for Valmontone to understand the discrepancy
+            if (values.length === 32 && Math.abs(avgGrowth - 1.7) < 0.1) {
+                console.log(`🔍 VALMONTONE GROWTH DEBUG:`);
+                console.log(`   Total periods analyzed: ${values.length}`);
+                console.log(`   Sales values (first 5):`, values.slice(0, 5).map(v => `€${v.toFixed(0)}`));
+                console.log(`   Sales values (last 5):`, values.slice(-5).map(v => `€${v.toFixed(0)}`));
+                console.log(`   Month-to-month growth rates:`, growthRates.slice(0, 10).map(r => `${r.toFixed(1)}%`));
+                console.log(`   Average growth (all periods): ${avgGrowth.toFixed(1)}%`);
+
+                // Calculate year-over-year for September specifically
+                const sept2023 = values[8]; // September 2023 (index 8)
+                const sept2024 = values[20]; // September 2024 (index 20)
+                if (sept2023 && sept2024) {
+                    const septYoY = ((sept2024 - sept2023) / sept2023) * 100;
+                    console.log(`   September 2023: €${sept2023.toFixed(0)}`);
+                    console.log(`   September 2024: €${sept2024.toFixed(0)}`);
+                    console.log(`   September YoY growth: ${septYoY.toFixed(1)}%`);
+                    console.log(`   ❗ DISCREPANCY: Card shows ${avgGrowth.toFixed(1)}% (all periods) vs Console shows ${septYoY.toFixed(1)}% (Sept only)`);
+                }
+            }
+
+            return avgGrowth;
+        }
+
+        // Calculate SIMPLE and USEFUL metrics (replacing complex overengineered stuff)
+        function calculateSimpleUsefulMetrics(pivotData, periods) {
+            const metrics = {
+                currentMonth: '',
+                lastYearSameMonth: '',
+                thisYearTotal: 0,
+                lastYearTotal: 0,
+                yoyGrowth: 0,
+                problemShops: [],
+                topGrowingShop: null,
+                topDecliningShop: null,
+                seasonalBenchmark: null
+            };
+
+            // Get current month info
+            const latestPeriod = periods[periods.length - 1];
+            const [currentYear, currentMonth] = latestPeriod.split('-');
+            const lastYear = String(parseInt(currentYear) - 1);
+            const sameMonthLastYear = `${lastYear}-${currentMonth}`;
+
+            metrics.currentMonth = latestPeriod;
+            metrics.lastYearSameMonth = sameMonthLastYear;
+
+            console.log(`📊 SIMPLE METRICS: Comparing ${latestPeriod} vs ${sameMonthLastYear}`);
+
+            // Calculate COMPREHENSIVE year-over-year (all months comparison)
+            const monthlyComparisons = [];
+            const availableMonths = [];
+
+            // Get all months where we have both this year and last year data
+            periods.forEach(period => {
+                const [year, month] = period.split('-');
+                const lastYearPeriod = `${parseInt(year) - 1}-${month}`;
+
+                if (periods.includes(lastYearPeriod)) {
+                    availableMonths.push({ current: period, lastYear: lastYearPeriod, month: month });
+                }
+            });
+
+            console.log(`📊 Found ${availableMonths.length} months for YoY comparison:`, availableMonths.map(m => `${m.current} vs ${m.lastYear}`));
+
+            // Calculate YoY for each month and average them
+            availableMonths.forEach(monthPair => {
+                let thisYearMonthSales = 0;
+                let lastYearMonthSales = 0;
+
+                pivotData.forEach(shop => {
+                    const currentData = shop.data[monthPair.current];
+                    const lastYearData = shop.data[monthPair.lastYear];
+
+                    if (currentData) thisYearMonthSales += currentData.sales;
+                    if (lastYearData) lastYearMonthSales += lastYearData.sales;
+                });
+
+                if (lastYearMonthSales > 0) {
+                    const monthlyYoY = ((thisYearMonthSales - lastYearMonthSales) / lastYearMonthSales) * 100;
+                    monthlyComparisons.push({
+                        month: monthPair.month,
+                        currentPeriod: monthPair.current,
+                        lastYearPeriod: monthPair.lastYear,
+                        thisYear: thisYearMonthSales,
+                        lastYear: lastYearMonthSales,
+                        yoyGrowth: monthlyYoY
+                    });
+
+                    console.log(`   ${monthPair.current}: €${thisYearMonthSales.toFixed(0)} vs ${monthPair.lastYear}: €${lastYearMonthSales.toFixed(0)} = ${monthlyYoY.toFixed(1)}%`);
+                }
+            });
+
+            // Calculate average YoY growth across all months
+            const avgYoYGrowth = monthlyComparisons.length > 0 ?
+                monthlyComparisons.reduce((sum, comp) => sum + comp.yoyGrowth, 0) / monthlyComparisons.length : 0;
+
+            // Also calculate totals for reference
+            const thisYearTotal = monthlyComparisons.reduce((sum, comp) => sum + comp.thisYear, 0);
+            const lastYearTotal = monthlyComparisons.reduce((sum, comp) => sum + comp.lastYear, 0);
+
+            // Individual shop YoY analysis
+            pivotData.forEach(shop => {
+                const currentData = shop.data[latestPeriod];
+                const lastYearData = shop.data[sameMonthLastYear];
+                if (currentData && lastYearData && lastYearData.sales > 1000) {
+                    const shopYoY = ((currentData.sales - lastYearData.sales) / lastYearData.sales) * 100;
+
+                    // Flag real problems (not seasonal noise)
+                    if (shopYoY < -40) {
+                        metrics.problemShops.push({
+                            shop: shop.shop,
+                            yoyChange: shopYoY,
+                            current: currentData.sales,
+                            lastYear: lastYearData.sales
+                        });
+                    }
+
+                    // Track best/worst performers
+                    if (!metrics.topGrowingShop || shopYoY > metrics.topGrowingShop.yoyChange) {
+                        metrics.topGrowingShop = {
+                            shop: shop.shop,
+                            yoyChange: shopYoY,
+                            current: currentData.sales,
+                            lastYear: lastYearData.sales
+                        };
+                    }
+
+                    if (!metrics.topDecliningShop || shopYoY < metrics.topDecliningShop.yoyChange) {
+                        metrics.topDecliningShop = {
+                            shop: shop.shop,
+                            yoyChange: shopYoY,
+                            current: currentData.sales,
+                            lastYear: lastYearData.sales
+                        };
+                    }
+                }
+            });
+
+            metrics.thisYearTotal = thisYearTotal;
+            metrics.lastYearTotal = lastYearTotal;
+            metrics.yoyGrowth = avgYoYGrowth;
+            metrics.monthlyComparisons = monthlyComparisons;
+            metrics.availableComparisons = monthlyComparisons.length;
+
+            // Create seasonal benchmark (simple median of past years for this month)
+            const monthNumber = parseInt(currentMonth);
+            const monthlyTotals = [];
+
+            // Calculate current month total for benchmark comparison
+            const thisYearSales = pivotData.reduce((sum, shop) =>
+                sum + (shop.data[latestPeriod] ? shop.data[latestPeriod].sales : 0), 0);
+
+            periods.forEach(period => {
+                const [year, month] = period.split('-');
+                if (parseInt(month) === monthNumber && year !== currentYear) {
+                    const monthTotal = pivotData.reduce((sum, shop) =>
+                        sum + (shop.data[period] ? shop.data[period].sales : 0), 0);
+                    if (monthTotal > 0) monthlyTotals.push(monthTotal);
+                }
+            });
+
+            if (monthlyTotals.length > 0) {
+                monthlyTotals.sort((a, b) => a - b);
+                const median = monthlyTotals[Math.floor(monthlyTotals.length / 2)];
+                const min = monthlyTotals[0];
+                const max = monthlyTotals[monthlyTotals.length - 1];
+
+                metrics.seasonalBenchmark = {
+                    median: median,
+                    range: [min, max],
+                    dataPoints: monthlyTotals.length,
+                    status: thisYearSales > median * 1.1 ? 'above_normal' :
+                           thisYearSales < median * 0.9 ? 'below_normal' : 'normal'
+                };
+            }
+
+            console.log(`📈 COMPREHENSIVE YoY Growth: ${metrics.yoyGrowth.toFixed(1)}% (average of ${monthlyComparisons.length} monthly comparisons)`);
+            console.log(`   Individual monthly growth rates:`, monthlyComparisons.map(c => `${c.month}: ${c.yoyGrowth.toFixed(1)}%`));
+            console.log(`⚠️ Problem shops: ${metrics.problemShops.length}`);
+            console.log(`🏆 Top grower: ${metrics.topGrowingShop?.shop} (${metrics.topGrowingShop?.yoyChange.toFixed(1)}%)`);
+
+            return metrics;
+        }
+
+        // Calculate comprehensive growth metrics for enhanced stats (DEPRECATED - TO BE REMOVED)
+        function calculateComprehensiveGrowthMetrics(pivotData, periods) {
+            const metrics = {
+                bestMonthlyGrowth: { shop: '', value: -Infinity, icon: '📉', color: '#dc3545' },
+                bestYearOverYear: { shop: '', value: -Infinity, icon: '📉', color: '#dc3545' },
+                avgTrendSlope: 0,
+                totalShopsGrowing: 0,
+                totalShopsDeclining: 0
+            };
+
+            let totalSlope = 0;
+            let validShops = 0;
+
+            pivotData.forEach(shop => {
+                // Monthly growth (existing avgGrowth)
+                if (shop.avgGrowth > metrics.bestMonthlyGrowth.value) {
+                    metrics.bestMonthlyGrowth.value = shop.avgGrowth;
+                    metrics.bestMonthlyGrowth.shop = shop.shop;
+                    metrics.bestMonthlyGrowth.icon = shop.avgGrowth >= 0 ? '📈' : '📉';
+                    metrics.bestMonthlyGrowth.color = shop.avgGrowth >= 0 ? '#28a745' : '#dc3545';
+                }
+
+                // Year-over-year growth (same month comparison)
+                const currentYear = parseInt(periods[periods.length - 1].split('-')[0]);
+                const currentMonth = parseInt(periods[periods.length - 1].split('-')[1]);
+
+                // Find same month in current year and previous year
+                const currentYearData = periods
+                    .filter(p => p.startsWith(`${currentYear}-`))
+                    .map(p => shop.data[p].sales)
+                    .reduce((sum, val) => sum + val, 0);
+
+                const previousYearData = periods
+                    .filter(p => p.startsWith(`${currentYear - 1}-`))
+                    .map(p => shop.data[p].sales)
+                    .reduce((sum, val) => sum + val, 0);
+
+                if (previousYearData > 0) {
+                    const yoyGrowth = ((currentYearData - previousYearData) / previousYearData) * 100;
+
+                    if (yoyGrowth > metrics.bestYearOverYear.value) {
+                        metrics.bestYearOverYear.value = yoyGrowth;
+                        metrics.bestYearOverYear.shop = shop.shop;
+                        metrics.bestYearOverYear.icon = yoyGrowth >= 0 ? '📈' : '📉';
+                        metrics.bestYearOverYear.color = yoyGrowth >= 0 ? '#28a745' : '#dc3545';
+                    }
+                }
+
+                // Trend slope from prediction
+                if (shop.prediction && shop.prediction.slope) {
+                    totalSlope += shop.prediction.slope;
+                    validShops++;
+                }
+
+                // Count growing vs declining shops
+                if (shop.avgGrowth > 2) {
+                    metrics.totalShopsGrowing++;
+                } else if (shop.avgGrowth < -2) {
+                    metrics.totalShopsDeclining++;
+                }
+            });
+
+            metrics.avgTrendSlope = validShops > 0 ? totalSlope / validShops : 0;
+
+            // Debug output
+            console.log('📈 COMPREHENSIVE METRICS DEBUG:');
+            console.log(`   Best monthly growth: ${metrics.bestMonthlyGrowth.shop} (${metrics.bestMonthlyGrowth.value.toFixed(1)}%)`);
+            console.log(`   Best year-over-year: ${metrics.bestYearOverYear.shop} (${metrics.bestYearOverYear.value.toFixed(1)}%)`);
+            console.log(`   Shops growing: ${metrics.totalShopsGrowing}`);
+            console.log(`   Shops declining: ${metrics.totalShopsDeclining}`);
+
+            return metrics;
+        }
+
+        // Calculate month-over-month trends across multiple years
+        function calculateMonthOverMonthTrends(pivotData, periods) {
+            const monthTrends = {};
+            const monthNames = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+
+            console.log('📅 CALCULATING MONTH-OVER-MONTH TRENDS ACROSS YEARS...');
+
+            for (let month = 1; month <= 12; month++) {
+                const monthData = [];
+
+                // Collect data for this month across all years
+                periods.forEach(period => {
+                    const [year, monthStr] = period.split('-');
+                    if (parseInt(monthStr) === month) {
+                        const yearNum = parseInt(year);
+
+                        // Sum total sales for all shops in this month/year
+                        const totalSales = pivotData.reduce((sum, shop) =>
+                            sum + (shop.data[period] ? shop.data[period].sales : 0), 0);
+
+                        if (totalSales > 0) {
+                            monthData.push({ year: yearNum, sales: totalSales, period: period });
+                        }
+                    }
+                });
+
+                // Sort by year
+                monthData.sort((a, b) => a.year - b.year);
+
+                if (monthData.length >= 2) {
+                    // Calculate year-over-year growth rates for this month
+                    const growthRates = [];
+                    for (let i = 1; i < monthData.length; i++) {
+                        const currentYear = monthData[i];
+                        const previousYear = monthData[i - 1];
+
+                        if (previousYear.sales > 0) {
+                            const growthRate = ((currentYear.sales - previousYear.sales) / previousYear.sales) * 100;
+                            growthRates.push({
+                                fromYear: previousYear.year,
+                                toYear: currentYear.year,
+                                growth: growthRate,
+                                fromSales: previousYear.sales,
+                                toSales: currentYear.sales
+                            });
+                        }
+                    }
+
+                    // Calculate average trend for this month
+                    const avgGrowth = growthRates.length > 0 ?
+                        growthRates.reduce((sum, rate) => sum + rate.growth, 0) / growthRates.length : 0;
+
+                    monthTrends[month] = {
+                        monthName: monthNames[month],
+                        monthNumber: month,
+                        yearData: monthData,
+                        growthRates: growthRates,
+                        avgTrend: avgGrowth,
+                        consistency: calculateTrendConsistency(growthRates),
+                        direction: avgGrowth > 1 ? 'growing' : avgGrowth < -1 ? 'declining' : 'stable',
+                        icon: avgGrowth > 1 ? '📈' : avgGrowth < -1 ? '📉' : '➡️',
+                        color: avgGrowth > 1 ? '#28a745' : avgGrowth < -1 ? '#dc3545' : '#6c757d'
+                    };
+
+                    // Debug logging for September (month 9) specifically
+                    if (month === 9) {
+                        console.log(`📊 SETTEMBRE TREND ANALYSIS:`);
+                        console.log(`   Years available:`, monthData.map(d => `${d.year}: €${d.sales.toFixed(0)}`));
+                        console.log(`   Growth rates:`, growthRates.map(g => `${g.fromYear}→${g.toYear}: ${g.growth.toFixed(1)}%`));
+                        console.log(`   Average trend: ${avgGrowth.toFixed(1)}%`);
+                        console.log(`   Direction: ${monthTrends[month].direction}`);
+                    }
+                }
+            }
+
+            // Show summary of all month trends
+            console.log('📊 SUMMARY OF MONTHLY TRENDS ACROSS YEARS:');
+            for (let month = 1; month <= 12; month++) {
+                if (monthTrends[month]) {
+                    const trend = monthTrends[month];
+                    console.log(`   ${trend.monthName}: ${trend.icon} ${trend.avgTrend > 0 ? '+' : ''}${trend.avgTrend.toFixed(1)}% (${trend.consistency})`);
+                }
+            }
+
+            return monthTrends;
+        }
+
+        // Helper function to calculate trend consistency
+        function calculateTrendConsistency(growthRates) {
+            if (growthRates.length < 2) return 'insufficient_data';
+
+            const positiveGrowth = growthRates.filter(rate => rate.growth > 0).length;
+            const negativeGrowth = growthRates.filter(rate => rate.growth < 0).length;
+            const total = growthRates.length;
+
+            if (positiveGrowth === total) return 'consistently_growing';
+            if (negativeGrowth === total) return 'consistently_declining';
+            if (Math.abs(positiveGrowth - negativeGrowth) <= 1) return 'mixed';
+            if (positiveGrowth > negativeGrowth) return 'mostly_growing';
+            return 'mostly_declining';
+        }
+
+        // ===== PHASE 5: TREND PREDICTION ALGORITHMS =====
+
+        // Linear regression prediction for next period
+        function predictNextPeriod(shop) {
+            const periods = window.timelinePeriods;
+            if (!periods || periods.length < 3) return { prediction: 0, confidence: 'low', trend: 'insufficient_data' };
+
+            const salesValues = periods.map(p => shop.data[p].sales);
+
+            console.log(`🔄 Predicting for shop: ${shop.shop}`);
+            console.log(`📅 Periods available:`, periods);
+            console.log(`💰 Sales values:`, salesValues);
+
+            // Try Fashion Seasonal Model first
+            const seasonalPrediction = predictFashionSeasonal(shop, periods, salesValues);
+            console.log(`🌟 Seasonal prediction result:`, seasonalPrediction);
+
+            if (seasonalPrediction.confidence !== 'insufficient_data') {
+                console.log(`✅ Using SEASONAL model for ${shop.shop}`);
+                return seasonalPrediction;
+            }
+
+            // Fallback to Linear Model
+            console.log(`⚠️ Falling back to LINEAR model for ${shop.shop}`);
+            const linearResult = predictLinear(salesValues, periods);
+            console.log(`📊 Linear prediction result:`, linearResult);
+            return linearResult;
+        }
+
+        // Fashion-Specific Seasonal Prediction Model
+        function predictFashionSeasonal(shop, periods, salesValues) {
+            try {
+                // Calculate temporal distances between periods (months)
+                function calculateMonthsDifference(period1, period2) {
+                    const [year1, month1] = period1.split('-').map(Number);
+                    const [year2, month2] = period2.split('-').map(Number);
+                    return (year2 - year1) * 12 + (month2 - month1);
+                }
+
+                // Extract month information with real temporal distances
+                const basePeriod = periods[0];
+                const monthData = periods.map((period, index) => ({
+                    period: period,
+                    month: parseInt(period.split('-')[1]), // Extract month (1-12)
+                    year: parseInt(period.split('-')[0]),   // Extract year
+                    sales: salesValues[index],
+                    monthsFromStart: calculateMonthsDifference(basePeriod, period) // Real temporal distance
+                })).filter(d => d.sales > 0);
+
+                // Require minimum 6 data points for reliable seasonal predictions
+                if (monthData.length < 6) return { prediction: 0, confidence: 'insufficient_data', trend: 'insufficient_data' };
+
+                // Get seasonality factors based on user selection
+                const selectedMode = document.querySelector('input[name="seasonalityMode"]:checked')?.value || 'fixed';
+                let fashionSeasonality;
+
+                if (selectedMode === 'dynamic' && dynamicSeasonalityFactors) {
+                    fashionSeasonality = dynamicSeasonalityFactors;
+                    console.log(`🎯 Using DYNAMIC seasonality for ${shop.shop}:`, fashionSeasonality);
+                } else {
+                    // Realistic Fashion Seasonal Factors (max 1.10 variation)
+                    fashionSeasonality = {
+                        1: 0.90,  // Gennaio - Post-Natale, saldi invernali
+                        2: 0.92,  // Febbraio - Fine inverno
+                        3: 1.05,  // Marzo - Nuove collezioni primavera
+                        4: 1.02,  // Aprile - Primavera
+                        5: 0.95,  // Maggio - Pre-estate
+                        6: 0.93,  // Giugno - Inizio estate
+                        7: 0.90,  // Luglio - Saldi estivi
+                        8: 0.88,  // Agosto - Vacanze
+                        9: 1.10,  // Settembre - Rientro, nuove collezioni autunno
+                        10: 1.08, // Ottobre - Autunno pieno
+                        11: 1.05, // Novembre - Pre-natalizio
+                        12: 1.10  // Dicembre - Natale (picco moderato)
+                    };
+                    console.log(`📊 Using FIXED seasonality for ${shop.shop}`);
+                }
+
+                // Deseasonalize data to find base trend
+                const deseasonalizedData = monthData.map(d => ({
+                    ...d,
+                    deseasonalized: d.sales / fashionSeasonality[d.month]
+                }));
+
+                // Linear regression using real temporal distances
+                const n = deseasonalizedData.length;
+                const sumX = deseasonalizedData.reduce((sum, d) => sum + d.monthsFromStart, 0);
+                const sumY = deseasonalizedData.reduce((sum, d) => sum + d.deseasonalized, 0);
+                const sumXY = deseasonalizedData.reduce((sum, d) => sum + (d.monthsFromStart * d.deseasonalized), 0);
+                const sumX2 = deseasonalizedData.reduce((sum, d) => sum + (d.monthsFromStart * d.monthsFromStart), 0);
+
+                const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+                const intercept = (sumY - slope * sumX) / n;
+
+                // Predict next period using real temporal distance
+                const lastPeriod = periods[periods.length - 1];
+                const nextPeriod = getNextPeriod(lastPeriod);
+                const nextMonth = parseInt(nextPeriod.split('-')[1]);
+                const nextMonthsFromStart = calculateMonthsDifference(basePeriod, nextPeriod);
+
+                // Base prediction (deseasonalized)
+                const basePrediction = slope * nextMonthsFromStart + intercept;
+
+                // Apply seasonal factor
+                const seasonalFactor = fashionSeasonality[nextMonth];
+                const finalPrediction = basePrediction * seasonalFactor;
+
+                // Improved year-over-year growth constraint considering multi-year trends
+                const lastYearSameMonth = monthData.find(d =>
+                    d.month === nextMonth && d.year === (parseInt(nextPeriod.split('-')[0]) - 1)
+                );
+                const twoYearsAgoSameMonth = monthData.find(d =>
+                    d.month === nextMonth && d.year === (parseInt(nextPeriod.split('-')[0]) - 2)
+                );
+
+                let constrainedPrediction = finalPrediction;
+                let yearOverYearGrowth1 = null; // Declare outside scope
+
+                if (lastYearSameMonth) {
+                    // Calculate multi-year trend if available
+                    let growthRate = 0.15; // Default 15% max growth
+
+                    if (twoYearsAgoSameMonth) {
+                        // Calculate 2-year average growth rate
+                        yearOverYearGrowth1 = (lastYearSameMonth.sales - twoYearsAgoSameMonth.sales) / twoYearsAgoSameMonth.sales;
+
+                        // If there's a consistent declining trend, allow it to continue (but cap at -20%)
+                        if (yearOverYearGrowth1 < 0) {
+                            growthRate = Math.max(-0.20, yearOverYearGrowth1 * 1.5); // Allow 1.5x the historical decline rate
+                        } else {
+                            growthRate = Math.min(0.15, yearOverYearGrowth1 * 1.2); // Allow 1.2x the historical growth rate
+                        }
+                    }
+
+                    const maxAllowedGrowth = lastYearSameMonth.sales * (1 + growthRate);
+                    const minAllowedGrowth = lastYearSameMonth.sales * (1 - Math.abs(growthRate));
+                    constrainedPrediction = Math.min(maxAllowedGrowth, Math.max(minAllowedGrowth, finalPrediction));
+
+                    console.log(`📊 Improved YoY Constraint for ${shop.shop}:`);
+                    console.log(`   Last year same month: €${lastYearSameMonth.sales.toFixed(0)}`);
+                    if (twoYearsAgoSameMonth && yearOverYearGrowth1 !== null) {
+                        console.log(`   Two years ago: €${twoYearsAgoSameMonth.sales.toFixed(0)}`);
+                        console.log(`   Historical trend: ${(yearOverYearGrowth1 * 100).toFixed(1)}%`);
+                        console.log(`   Dynamic growth rate: ${(growthRate * 100).toFixed(1)}%`);
+                    }
+                    console.log(`   Raw prediction: €${finalPrediction.toFixed(0)}`);
+                    console.log(`   Constrained: €${constrainedPrediction.toFixed(0)}`);
+                }
+
+                // Debug logging for specific shops
+                if (shop.shop.toUpperCase().includes('VALMONTONE')) {
+                    console.log(`🔍 VALMONTONE DEBUG:`);
+                    console.log(`   Available periods:`, monthData.map(d => `${d.period}: €${d.sales.toFixed(0)}`));
+                    console.log(`   Slope (monthly growth): ${slope.toFixed(2)}`);
+                    console.log(`   Base prediction (deseasonalized): €${basePrediction.toFixed(0)}`);
+                    console.log(`   Seasonal factor (month ${nextMonth}): ${seasonalFactor.toFixed(3)}`);
+                    console.log(`   Final prediction: €${finalPrediction.toFixed(0)}`);
+                    console.log(`   YoY constraint: €${constrainedPrediction.toFixed(0)}`);
+                }
+
+                // REMOVED: Overly restrictive "recent average" constraint
+                // This was causing predictions to be artificially low
+                const smoothedPrediction = constrainedPrediction;
+
+                // Calculate R² on original data vs seasonal model
+                const seasonalPredicted = monthData.map((d) => {
+                    const baseValue = slope * d.monthsFromStart + intercept;
+                    return baseValue * fashionSeasonality[d.month];
+                });
+
+                const r2 = calculateR2(monthData.map(d => d.sales), seasonalPredicted);
+
+                // Stricter confidence thresholds for realistic predictions
+                let confidence = 'low';
+                if (r2 > 0.7 && monthData.length >= 8) confidence = 'high';
+                else if (r2 > 0.4 && monthData.length >= 6) confidence = 'medium';
+
+                // Trend analysis with realistic thresholds
+                const yearOverYearGrowth = calculateYearOverYearGrowth(monthData);
+                let trend = 'stable';
+                if (yearOverYearGrowth > 8) trend = 'growing';
+                else if (yearOverYearGrowth < -8) trend = 'declining';
+
+                return {
+                    prediction: smoothedPrediction,
+                    confidence: confidence,
+                    trend: trend,
+                    slope: slope,
+                    r2: r2,
+                    seasonalFactor: seasonalFactor,
+                    basePrediction: basePrediction,
+                    yearOverYearGrowth: yearOverYearGrowth,
+                    modelType: 'seasonal-fashion-v2',
+                    nextMonth: nextMonth,
+                    regressionLine: { slope, intercept },
+                    constrainedBy: lastYearSameMonth ? 'year-over-year-15pct' : 'recent-average',
+                    dataPoints: monthData.length
+                };
+
+            } catch (error) {
+                console.warn('Seasonal prediction failed:', error);
+                return { prediction: 0, confidence: 'insufficient_data', trend: 'insufficient_data' };
+            }
+        }
+
+        // Helper: Calculate year-over-year growth for seasonal trend
+        function calculateYearOverYearGrowth(monthData) {
+            const monthGroups = {};
+            monthData.forEach(d => {
+                if (!monthGroups[d.month]) monthGroups[d.month] = [];
+                monthGroups[d.month].push(d);
+            });
+
+            let totalGrowth = 0;
+            let comparisons = 0;
+
+            Object.values(monthGroups).forEach(months => {
+                if (months.length >= 2) {
+                    months.sort((a, b) => a.year - b.year);
+                    for (let i = 1; i < months.length; i++) {
+                        const growth = ((months[i].sales - months[i-1].sales) / months[i-1].sales) * 100;
+                        totalGrowth += growth;
+                        comparisons++;
+                    }
+                }
+            });
+
+            return comparisons > 0 ? totalGrowth / comparisons : 0;
+        }
+
+        // Helper: Get next period string
+        function getNextPeriod(currentPeriod) {
+            const [year, month] = currentPeriod.split('-');
+            let nextMonth = parseInt(month) + 1;
+            let nextYear = parseInt(year);
+
+            if (nextMonth > 12) {
+                nextMonth = 1;
+                nextYear += 1;
+            }
+
+            return `${nextYear}-${nextMonth.toString().padStart(2, '0')}`;
+        }
+
+        // Fallback Linear Regression (Original improved)
+        function predictLinear(salesValues, periods) {
+            const validValues = [];
+            const validIndices = [];
+            salesValues.forEach((value, index) => {
+                if (value > 0) {
+                    validValues.push(value);
+                    validIndices.push(index);
+                }
+            });
+
+            if (validValues.length < 3) return { prediction: 0, confidence: 'low', trend: 'insufficient_data' };
+
+            const n = validValues.length;
+            const sumX = validIndices.reduce((sum, val) => sum + val, 0);
+            const sumY = validValues.reduce((sum, val) => sum + val, 0);
+            const sumXY = validValues.reduce((sum, val, i) => sum + validIndices[i] * val, 0);
+            const sumX2 = validIndices.reduce((sum, val) => sum + val * val, 0);
+
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+
+            const nextIndex = periods.length;
+            const nextPrediction = slope * nextIndex + intercept;
+
+            const predicted = validIndices.map(x => slope * x + intercept);
+            const r2 = calculateR2(validValues, predicted);
+
+            let confidence = 'low';
+            if (r2 > 0.85) confidence = 'high';
+            else if (r2 > 0.65) confidence = 'medium';
+
+            let trend = 'stable';
+            const slopeThreshold = sumY / n * 0.05;
+            if (slope > slopeThreshold) trend = 'growing';
+            else if (slope < -slopeThreshold) trend = 'declining';
+
+            const avgSales = sumY / n;
+            const prediction = Math.max(0, nextPrediction);
+            const smoothedPrediction = prediction > avgSales * 2 ? avgSales * 1.5 : prediction;
+
+            return {
+                prediction: smoothedPrediction,
+                confidence: confidence,
+                trend: trend,
+                slope: slope,
+                r2: r2,
+                modelType: 'linear',
+                regressionLine: { slope, intercept }
+            };
+        }
+
+        // Calculate R-squared for prediction confidence
+        function calculateR2(actual, predicted) {
+            if (actual.length === 0) return 0;
+
+            const actualMean = actual.reduce((sum, val) => sum + val, 0) / actual.length;
+            const totalSumSquares = actual.reduce((sum, val) => sum + Math.pow(val - actualMean, 2), 0);
+            const residualSumSquares = actual.reduce((sum, val, i) => sum + Math.pow(val - predicted[i], 2), 0);
+
+            if (totalSumSquares === 0) return 0;
+            return Math.max(0, 1 - (residualSumSquares / totalSumSquares));
+        }
+
+        // Advanced trend analysis with seasonal detection
+        function analyzeSeasonalTrends(shop) {
+            const periods = window.timelinePeriods;
+            if (!periods || periods.length < 6) return { seasonal: false, pattern: 'none' };
+
+            const salesByMonth = {};
+            periods.forEach(periodo => {
+                const [year, month] = periodo.split('-');
+                const monthNum = parseInt(month);
+                if (!salesByMonth[monthNum]) salesByMonth[monthNum] = [];
+                salesByMonth[monthNum].push(shop.data[periodo].sales);
+            });
+
+            // Check if we have data for multiple years in same months
+            const monthsWithMultipleYears = Object.keys(salesByMonth).filter(month =>
+                salesByMonth[month].length > 1
+            );
+
+            if (monthsWithMultipleYears.length < 3) return { seasonal: false, pattern: 'none' };
+
+            // Calculate coefficient of variation for each month
+            const monthlyVariation = {};
+            monthsWithMultipleYears.forEach(month => {
+                const values = salesByMonth[month];
+                const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+                const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+                const stdDev = Math.sqrt(variance);
+                monthlyVariation[month] = mean > 0 ? stdDev / mean : 0;
+            });
+
+            // Determine if pattern is seasonal (low variation within months, high between months)
+            const avgVariation = Object.values(monthlyVariation).reduce((sum, val) => sum + val, 0) / Object.values(monthlyVariation).length;
+            const seasonal = avgVariation < 0.3; // Less than 30% variation within months
+
+            return {
+                seasonal: seasonal,
+                pattern: seasonal ? 'detected' : 'irregular',
+                monthlyVariation: monthlyVariation
+            };
+        }
+
+        // Generate prediction alerts and recommendations
+        function generatePredictionAlerts() {
+            const alerts = [];
+
+            // Generate alerts from pivotData shops with predictions
+            pivotData.forEach(shop => {
+                if (!shop.prediction) return;
+                const pred = shop.prediction;
+                const shopName = getShopDisplayName(shop.shop);
+
+                if (pred.confidence === 'high') {
+                    if (pred.trend === 'growing') {
+                        alerts.push({
+                            type: 'success',
+                            severity: 'info',
+                            shop: shop.shop,
+                            title: 'Crescita Sostenuta',
+                            message: `Crescita sostenuta prevista (+${pred.slope > 0 ? (pred.slope * 100).toFixed(1) : '0'}% trend)`
+                        });
+                    } else if (pred.trend === 'declining') {
+                        alerts.push({
+                            type: 'warning',
+                            severity: 'warning',
+                            shop: shop.shop,
+                            title: 'Tendenza al Declino',
+                            message: `Tendenza al declino rilevata (${pred.slope < 0 ? (pred.slope * 100).toFixed(1) : '0'}% trend)`
+                        });
+                    }
+                }
+
+                // REMOVED: "Pattern Irregolare" alerts
+                // For seasonal fashion business, irregular patterns are NORMAL
+                // Low R² is expected due to seasonality variations
+
+                // Only alert if prediction is unrealistically high/low
+                if (pred.prediction > 0) {
+                    const currentPeriodSales = getCurrentPeriodSales(shop);
+                    if (currentPeriodSales > 0) {
+                        const predictionRatio = pred.prediction / currentPeriodSales;
+
+                        if (predictionRatio > 2.0) {
+                            alerts.push({
+                                type: 'warning',
+                                severity: 'warning',
+                                shop: shop.shop,
+                                title: 'Predizione Molto Alta',
+                                message: `Predizione ${(predictionRatio * 100).toFixed(0)}% sopra media attuale - verificare dati`
+                            });
+                        } else if (predictionRatio < 0.3) {
+                            alerts.push({
+                                type: 'warning',
+                                severity: 'warning',
+                                shop: shop.shop,
+                                title: 'Predizione Molto Bassa',
+                                message: `Predizione ${(100 - predictionRatio * 100).toFixed(0)}% sotto media attuale - possibile problema`
+                            });
+                        }
+                    }
+                }
+            });
+
+            return alerts;
+        }
+
+        // Helper function to get current period sales average for a shop
+        function getCurrentPeriodSales(shop) {
+            const periods = window.timelinePeriods;
+            if (!periods || periods.length < 3) return 0;
+
+            // Get last 3 months average as "current" baseline
+            const recentPeriods = periods.slice(-3);
+            const totalSales = recentPeriods.reduce((sum, period) =>
+                sum + (shop.data[period] ? shop.data[period].sales : 0), 0);
+
+            return totalSales / recentPeriods.length;
         }
 
         function renderResults() {
@@ -2041,7 +3079,7 @@
                         <div>Provvigioni B ${modeText}</div>
                     </div>
                     <div class="stat-card" style="background: linear-gradient(135deg, ${commissionGrowthColor}, ${commissionGrowthColor}cc);">
-                        <div class="stat-value">${commissionGrowthIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(1)}%</div>
+                        <div class="stat-value">${commissionGrowthIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(2)}%</div>
                         <div>Crescita Provvigioni</div>
                     </div>
                 `;
@@ -2061,6 +3099,9 @@
                     });
                 });
 
+                // Calculate SIMPLE and USEFUL metrics only
+                const simpleMetrics = calculateSimpleUsefulMetrics(pivotData, periods);
+
                 // Find best and worst growth performers
                 const bestGrowthShop = pivotData.reduce((best, current) =>
                     current.avgGrowth > best.avgGrowth ? current : best, pivotData[0]);
@@ -2070,32 +3111,118 @@
                 const avgGrowthIcon = bestGrowthShop.avgGrowth >= 0 ? '📈' : '📉';
                 const avgGrowthColor = bestGrowthShop.avgGrowth >= 0 ? '#28a745' : '#dc3545';
 
+                // Generate prediction alerts for all shops
+                const allPredictionAlerts = generatePredictionAlerts();
+                const criticalAlerts = allPredictionAlerts.filter(alert => alert.severity === 'critical');
+                const warningAlerts = allPredictionAlerts.filter(alert => alert.severity === 'warning');
+
+                // Calculate prediction accuracy statistics
+                let totalConfidence = 0;
+                let highConfidencePredictions = 0;
+                let lowConfidencePredictions = 0;
+                pivotData.forEach(shop => {
+                    const prediction = predictNextPeriod(shop);
+                    if (prediction.confidence === 'high') highConfidencePredictions++;
+                    else if (prediction.confidence === 'low') lowConfidencePredictions++;
+
+                    const confidenceValue = prediction.confidence === 'high' ? 0.8 :
+                                           prediction.confidence === 'medium' ? 0.6 : 0.3;
+                    totalConfidence += confidenceValue;
+                });
+                const avgConfidence = totalShops > 0 ? (totalConfidence / totalShops * 100) : 0;
+
+                // SIMPLE AND USEFUL DASHBOARD (3 core metrics only)
+                const yoyColor = simpleMetrics.yoyGrowth >= 0 ? '#28a745' : '#dc3545';
+                const yoyIcon = simpleMetrics.yoyGrowth >= 0 ? '📈' : '📉';
+
+                const benchmarkColor = simpleMetrics.seasonalBenchmark?.status === 'above_normal' ? '#28a745' :
+                                      simpleMetrics.seasonalBenchmark?.status === 'below_normal' ? '#dc3545' : '#6c757d';
+                const benchmarkIcon = simpleMetrics.seasonalBenchmark?.status === 'above_normal' ? '🔥' :
+                                     simpleMetrics.seasonalBenchmark?.status === 'below_normal' ? '❄️' : '✅';
+
                 document.getElementById('stats').innerHTML = filterDisplay + `
+                    <div class="stat-card" style="background: linear-gradient(135deg, ${yoyColor}, ${yoyColor}cc);">
+                        <div class="stat-value">${yoyIcon} ${simpleMetrics.yoyGrowth > 0 ? '+' : ''}${simpleMetrics.yoyGrowth.toFixed(1)}%</div>
+                        <div class="stat-label">Trend Anno/Anno (${simpleMetrics.availableComparisons} mesi)</div>
+                        <div class="tooltip">Media di tutte le comparazioni mese-per-mese disponibili vs anno precedente. Molto più affidabile di un singolo mese. Basato su ${simpleMetrics.availableComparisons} confronti mensili.</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, ${benchmarkColor}, ${benchmarkColor}cc);">
+                        <div class="stat-value">${benchmarkIcon} ${simpleMetrics.seasonalBenchmark?.status || 'N/A'}</div>
+                        <div class="stat-label">vs Benchmark Storico</div>
+                        <div class="tooltip">Confronto con mediana degli ultimi ${simpleMetrics.seasonalBenchmark?.dataPoints || 0} anni stesso mese. Range normale: €${simpleMetrics.seasonalBenchmark ? (simpleMetrics.seasonalBenchmark.range[0]/1000).toFixed(0) : '0'}K - €${simpleMetrics.seasonalBenchmark ? (simpleMetrics.seasonalBenchmark.range[1]/1000).toFixed(0) : '0'}K</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #dc3545, #e74c3c);">
+                        <div class="stat-value">⚠️ ${simpleMetrics.problemShops.length}</div>
+                        <div class="stat-label">Negozi in Difficoltà</div>
+                        <div class="tooltip">Negozi con calo >40% rispetto anno scorso - questi richiedono attenzione immediata</div>
+                    </div>
                     <div class="stat-card">
                         <div class="stat-value">${totalShops}</div>
-                        <div>Negozi Analizzati</div>
+                        <div class="stat-label">Negozi Totali</div>
+                        <div class="tooltip">Numero di negozi analizzati</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">${periods.length}</div>
-                        <div>Periodi Timeline</div>
+                        <div class="stat-value">${getShopDisplayName(simpleMetrics.topGrowingShop?.shop || '')}</div>
+                        <div class="stat-label">Top Crescita: ${simpleMetrics.topGrowingShop ? '+' + simpleMetrics.topGrowingShop.yoyChange.toFixed(0) + '%' : 'N/A'}</div>
+                        <div class="tooltip">Negozio con maggiore crescita anno su anno</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">€${totalSalesAllPeriods.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
-                        <div>Venduto Cumulativo</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">€${totalCommissionAllPeriods.toLocaleString('it-IT', {minimumFractionDigits: 2})}</div>
-                        <div>Provvigioni ${modeText}</div>
-                    </div>
-                    <div class="stat-card" style="background: linear-gradient(135deg, ${avgGrowthColor}, ${avgGrowthColor}cc);">
-                        <div class="stat-value">${avgGrowthIcon} ${bestGrowthShop.avgGrowth > 0 ? '+' : ''}${bestGrowthShop.avgGrowth.toFixed(1)}%</div>
-                        <div>Miglior Crescita Media</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${getShopDisplayName(bestGrowthShop.shop)}</div>
-                        <div>Top Performer</div>
+                        <div class="stat-value">${getShopDisplayName(simpleMetrics.topDecliningShop?.shop || '')}</div>
+                        <div class="stat-label">Maggiore Calo: ${simpleMetrics.topDecliningShop ? simpleMetrics.topDecliningShop.yoyChange.toFixed(0) + '%' : 'N/A'}</div>
+                        <div class="tooltip">Negozio con maggiore calo anno su anno</div>
                     </div>
                 `;
+
+                // Add REAL problems alerts (not overengineered prediction stuff)
+                if (simpleMetrics.problemShops.length > 0) {
+                    const alertsHtml = `
+                        <div style="margin-top: 20px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px;">
+                            <h3 style="color: #856404; margin: 0 0 10px 0;">⚠️ Negozi che Richiedono Attenzione</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                                ${simpleMetrics.problemShops.map(shop => `
+                                    <div style="background: white; padding: 10px; border-radius: 6px; border-left: 4px solid #dc3545;">
+                                        <strong>${getShopDisplayName(shop.shop)}</strong><br>
+                                        <span style="color: #dc3545;">${shop.yoyChange.toFixed(1)}% vs anno scorso</span><br>
+                                        <small>€${shop.current.toFixed(0)} vs €${shop.lastYear.toFixed(0)}</small>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('stats').innerHTML += alertsHtml;
+                }
+
+                // REMOVED: Complex prediction alerts that were useless for seasonal business
+                if (false && allPredictionAlerts.length > 0) {
+                    const alertsHtml = `
+                        <div style="margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #2d3436, #636e72); border-radius: 10px; color: white;">
+                            <h3 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                                <span>🚨</span> Alert Predizioni
+                            </h3>
+                            <div class="prediction-alerts-container">
+                                ${allPredictionAlerts.slice(0, 5).map(alert => `
+                                    <div class="prediction-alert ${alert.severity}" style="
+                                        padding: 10px 15px;
+                                        margin: 8px 0;
+                                        border-radius: 6px;
+                                        border-left: 4px solid ${alert.severity === 'critical' ? '#e74c3c' : alert.severity === 'warning' ? '#f39c12' : '#3498db'};
+                                        background: ${alert.severity === 'critical' ? 'rgba(231,76,60,0.1)' : alert.severity === 'warning' ? 'rgba(243,156,18,0.1)' : 'rgba(52,152,219,0.1)'};
+                                        font-size: 12px;
+                                        line-height: 1.4;
+                                    ">
+                                        <div style="font-weight: bold; margin-bottom: 4px;">
+                                            ${alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟡' : '🔵'}
+                                            ${getShopDisplayName(alert.shop)} - ${alert.title}
+                                        </div>
+                                        <div style="opacity: 0.9;">${alert.message}</div>
+                                    </div>
+                                `).join('')}
+                                ${allPredictionAlerts.length > 5 ? `<div style="text-align: center; padding: 10px; opacity: 0.7; font-size: 11px;">... e altri ${allPredictionAlerts.length - 5} alert</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('stats').insertAdjacentHTML('beforeend', alertsHtml);
+                }
             } else {
                 // Single period mode (existing logic)
                 const totalSales = pivotData.reduce((sum, shop) => sum + shop.totalSales, 0);
@@ -2277,7 +3404,7 @@
                                             ${salesGrowthIcon} ${salesGrowth > 0 ? '+' : ''}${salesGrowth.toFixed(1)}%
                                         </div>
                                         <div class="growth-metric" style="color: ${commissionGrowthColor};">
-                                            ${commissionGrowthIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(1)}%
+                                            ${commissionGrowthIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(2)}%
                                         </div>
                                     </div>
                                 </div>
@@ -2288,18 +3415,18 @@
                             <table>
                                 <thead>
                                     <tr>
-                                        <th rowspan="2" style="text-align: center; vertical-align: middle;">👤 Operatore</th>
-                                        <th colspan="3" style="text-align: center; background: #e3f2fd;">${periodA}</th>
-                                        <th colspan="3" style="text-align: center; background: #fff3e0;">${periodB}</th>
-                                        <th rowspan="2" style="text-align: center; vertical-align: middle;">📈 Crescita</th>
+                                        <th rowspan="2" style="text-align: center; vertical-align: middle; color: white;">👤 Operatore</th>
+                                        <th colspan="3" style="text-align: center; background: #1565c0; color: white; font-weight: bold;">${periodA}</th>
+                                        <th colspan="3" style="text-align: center; background: #bf360c; color: white; font-weight: bold;">${periodB}</th>
+                                        <th rowspan="2" style="text-align: center; vertical-align: middle; color: white;">📈 Crescita</th>
                                     </tr>
                                     <tr>
-                                        <th style="background: #e3f2fd;">💰 Venduto</th>
-                                        <th style="background: #e3f2fd;">🏆 Provvigione</th>
-                                        <th style="background: #e3f2fd;">🔢 Trans.</th>
-                                        <th style="background: #fff3e0;">💰 Venduto</th>
-                                        <th style="background: #fff3e0;">🏆 Provvigione</th>
-                                        <th style="background: #fff3e0;">🔢 Trans.</th>
+                                        <th style="background: #1976d2; color: white; font-weight: bold;">💰 Venduto</th>
+                                        <th style="background: #1976d2; color: white; font-weight: bold;">🏆 Provvigione</th>
+                                        <th style="background: #1976d2; color: white; font-weight: bold;">🔢 Trans.</th>
+                                        <th style="background: #d32f2f; color: white; font-weight: bold;">💰 Venduto</th>
+                                        <th style="background: #d32f2f; color: white; font-weight: bold;">🏆 Provvigione</th>
+                                        <th style="background: #d32f2f; color: white; font-weight: bold;">🔢 Trans.</th>
                                     </tr>
                                 </thead>
                                 <tbody>`;
@@ -2349,14 +3476,14 @@
 
                     html += `
                         <tr class="${rowClass}">
-                            <td><strong>${operator.operatore}</strong></td>
-                            <td class="currency" style="background: #f8f9fa;">€${operator.salesA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-                            <td class="currency" style="background: #f8f9fa;">€${operator.commissionA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-                            <td class="text-center" style="background: #f8f9fa;">${operator.transactionsA}</td>
-                            <td class="currency" style="background: #fff8e1;">€${operator.salesB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-                            <td class="currency" style="background: #fff8e1;">€${operator.commissionB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-                            <td class="text-center" style="background: #fff8e1;">${operator.transactionsB}</td>
-                            <td class="text-center" style="color: ${growthColor}; font-weight: bold;">
+                            <td><strong style="color: #1a1a1a;">${operator.operatore}</strong></td>
+                            <td class="currency" style="background: #e3f2fd; color: #0d47a1; font-weight: bold;">€${operator.salesA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="currency" style="background: #e3f2fd; color: #0d47a1; font-weight: bold;">€${operator.commissionA.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="text-center" style="background: #e3f2fd; color: #0d47a1; font-weight: bold;">${operator.transactionsA}</td>
+                            <td class="currency" style="background: #fff3e0; color: #bf360c; font-weight: bold;">€${operator.salesB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="currency" style="background: #fff3e0; color: #bf360c; font-weight: bold;">€${operator.commissionB.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+                            <td class="text-center" style="background: #fff3e0; color: #bf360c; font-weight: bold;">${operator.transactionsB}</td>
+                            <td class="text-center" style="color: ${growthColor}; font-weight: bold; background: #f8f9fa;">
                                 ${growthIcon} ${operator.growthPercent > 0 ? '+' : ''}${operator.growthPercent.toFixed(1)}%
                             </td>
                         </tr>
@@ -2394,7 +3521,7 @@
                             <div class="shop-info">
                                 <div class="shop-name">🏪 ${shopDisplayName}</div>
                                 <div class="shop-summary">
-                                    ${periods.length} periodi • Trend medio: ${avgGrowthIcon} ${shop.avgGrowth > 0 ? '+' : ''}${shop.avgGrowth.toFixed(1)}%
+                                    ${periods.length} periodi • Trend: ${avgGrowthIcon} ${shop.avgGrowth > 0 ? '+' : ''}${shop.avgGrowth.toFixed(1)}% • Predizione: ${shop.prediction.confidence}
                                 </div>
                             </div>
                             <div class="timeline-summary" style="color: ${avgGrowthColor};">
@@ -2414,6 +3541,20 @@
                         <div class="operators-table">
                             <div class="timeline-chart-container">
                                 <h4 style="text-align: center; margin: 15px 0;">📊 Andamento Temporale - ${shopDisplayName}</h4>
+                                <div class="prediction-info" style="text-align: center; margin: 10px 0; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                                    <span style="font-weight: bold;">Predizione Prossimo Periodo:</span>
+                                    <span style="color: ${shop.prediction.confidence === 'high' ? '#28a745' : shop.prediction.confidence === 'medium' ? '#ffc107' : '#6c757d'};">
+                                        €${shop.prediction.prediction.toLocaleString('it-IT', {minimumFractionDigits: 0})}
+                                        (${shop.prediction.confidence === 'high' ? '🎯 Alta' : shop.prediction.confidence === 'medium' ? '📊 Media' : '❓ Bassa'} confidenza)
+                                        ${shop.prediction.modelType === 'seasonal-fashion' ?
+                                            `<br><span style="font-size: 11px; opacity: 0.8; color: #e67e22; font-weight: bold;">🌟 Modello Stagionale (Fattore: ${shop.prediction.seasonalFactor?.toFixed(2)}x, R²: ${(shop.prediction.r2 * 100)?.toFixed(0)}%)</span>` :
+                                            `<br><span style="font-size: 11px; opacity: 0.8; color: #34495e;">📊 Modello Lineare (R²: ${(shop.prediction.r2 * 100)?.toFixed(0)}%)</span>`
+                                        }
+                                    </span>
+                                    ${shop.prediction.trend === 'growing' ? '<span style="color: #28a745;">📈 Crescita</span>' :
+                                      shop.prediction.trend === 'declining' ? '<span style="color: #dc3545;">📉 Declino</span>' :
+                                      '<span style="color: #6c757d;">➡️ Stabile</span>'}
+                                </div>
                                 <div class="timeline-chart" id="chart-${shopIndex}"></div>
                             </div>
                             <table>
@@ -2485,10 +3626,14 @@
 
             const periods = window.timelinePeriods;
             const salesData = periods.map(p => shop.data[p].sales);
-            const maxSales = Math.max(...salesData);
+
+            // Include prediction in max calculation for proper scaling
+            const prediction = shop.prediction ? shop.prediction.prediction : 0;
+            const maxSales = Math.max(...salesData, prediction);
 
             let chartHtml = '<div class="mini-chart">';
 
+            // Historical data bars
             periods.forEach((periodo, index) => {
                 const data = shop.data[periodo];
                 const [year, month] = periodo.split('-');
@@ -2503,6 +3648,33 @@
                     </div>
                 `;
             });
+
+            // Add prediction bar if available
+            if (shop.prediction && shop.prediction.prediction > 0) {
+                const predictionHeight = maxSales > 0 ? (prediction / maxSales) * 80 : 0;
+                const confidenceColor = shop.prediction.confidence === 'high' ? '#28a745' :
+                                      shop.prediction.confidence === 'medium' ? '#ffc107' : '#6c757d';
+
+                // Calculate next period label
+                const lastPeriod = periods[periods.length - 1];
+                const [lastYear, lastMonth] = lastPeriod.split('-');
+                const nextMonth = parseInt(lastMonth) + 1;
+                const nextYear = nextMonth > 12 ? parseInt(lastYear) + 1 : parseInt(lastYear);
+                const finalMonth = nextMonth > 12 ? 1 : nextMonth;
+                const monthNames = ['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', 'D'];
+                const nextLabel = monthNames[finalMonth - 1] + String(nextYear).slice(-2);
+
+                chartHtml += `
+                    <div class="chart-bar prediction-bar">
+                        <div class="chart-column prediction-column"
+                             style="height: ${predictionHeight}px;
+                                    background: linear-gradient(to top, ${confidenceColor}, ${confidenceColor}aa);
+                                    border: 2px dashed ${confidenceColor};"
+                             title="Predizione: €${prediction.toLocaleString('it-IT')} (${shop.prediction.confidence})"></div>
+                        <div class="chart-label prediction-label">${nextLabel}</div>
+                    </div>
+                `;
+            }
 
             chartHtml += '</div>';
             chartContainer.innerHTML = chartHtml;
@@ -2663,6 +3835,8 @@
 
             if (window.isComparisonMode) {
                 exportComparisonToPDF();
+            } else if (window.isTimelineMode) {
+                exportTimelineToPDF();
             } else {
                 exportSinglePeriodToPDF();
             }
@@ -3054,7 +4228,7 @@
 
             doc.setFont(undefined, 'bold');
             doc.text(cleanText(`CRESCITA VENDITE: ${salesTrendIcon} ${salesGrowth > 0 ? '+' : ''}${salesGrowth.toFixed(1)}%`), 20, summaryY + 50);
-            doc.text(cleanText(`CRESCITA PROVVIGIONI: ${commissionTrendIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(1)}%`), 20, summaryY + 56);
+            doc.text(cleanText(`CRESCITA PROVVIGIONI: ${commissionTrendIcon} ${commissionGrowth > 0 ? '+' : ''}${commissionGrowth.toFixed(2)}%`), 20, summaryY + 56);
 
             // Line separator
             doc.setLineWidth(0.5);
@@ -3117,15 +4291,15 @@
                     5: { halign: 'right', cellWidth: 24 } // Prov B
                 },
                 margin: { left: 20, right: 20 },
-                didDrawCell: function (data) {
-                    // Color code growth cells
+                willDrawCell: function (data) {
+                    // Color code growth cells BEFORE drawing
                     if (data.section === 'body' && data.column.index === 3) {
-                        const cellText = data.cell.text[0];
+                        const cellText = data.cell.text[0] || '';
                         if (cellText.includes('[TREND_UP]')) {
                             data.cell.styles.textColor = [34, 139, 34]; // Dark green
                             data.cell.styles.fontStyle = 'bold';
                         } else if (cellText.includes('[TREND_DOWN]')) {
-                            data.cell.styles.textColor = [220, 20, 60]; // Crimson
+                            data.cell.styles.textColor = [220, 20, 60]; // RED for negative
                             data.cell.styles.fontStyle = 'bold';
                         }
                     }
@@ -3245,7 +4419,197 @@
 
             // Show success message
             setTimeout(() => {
-                alert(`Report Comparativo PDF generato con successo!\n\nFile: ${filename}\n\nConfronto incluso:\n• Periodo A: ${monthNameA} ${yearA} (EUR ${totalSalesA.toLocaleString('it-IT')})\n• Periodo B: ${monthNameB} ${yearB} (EUR ${totalSalesB.toLocaleString('it-IT')})\n• Crescita Vendite: ${salesGrowth.toFixed(1)}%\n• Crescita Provvigioni: ${commissionGrowth.toFixed(1)}%`);
+                alert(`Report Comparativo PDF generato con successo!\n\nFile: ${filename}\n\nConfronto incluso:\n• Periodo A: ${monthNameA} ${yearA} (EUR ${totalSalesA.toLocaleString('it-IT')})\n• Periodo B: ${monthNameB} ${yearB} (EUR ${totalSalesB.toLocaleString('it-IT')})\n• Crescita Vendite: ${salesGrowth.toFixed(1)}%\n• Crescita Provvigioni: ${commissionGrowth.toFixed(2)}%`);
+            }, 500);
+        }
+
+        // Timeline mode PDF export with red negative percentages
+        function exportTimelineToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            // Helper function to clean text from problematic characters
+            function cleanText(text) {
+                return text
+                    .replace(/📊/g, '[CHART]')
+                    .replace(/📈/g, '[TREND_UP]')
+                    .replace(/📉/g, '[TREND_DOWN]')
+                    .replace(/🏪/g, '[SHOP]')
+                    .replace(/🥇/g, '1°')
+                    .replace(/🥈/g, '2°')
+                    .replace(/🥉/g, '3°')
+                    .replace(/📝/g, '[NOTE]')
+                    .replace(/⭐/g, '[STAR]')
+                    .replace(/⚙️/g, '*')
+                    .replace(/€/g, 'EUR ')
+                    .replace(/à/g, 'a\'')
+                    .replace(/è/g, 'e\'')
+                    .replace(/é/g, 'e\'')
+                    .replace(/ì/g, 'i\'')
+                    .replace(/ò/g, 'o\'')
+                    .replace(/ù/g, 'u\'');
+            }
+
+            const currentDate = new Date().toLocaleDateString('it-IT');
+            const calculationMode = document.getElementById('calculationMode').value;
+            const modeText = calculationMode === 'custom' ? 'Personalizzate' : 'Default';
+            const periods = window.timelinePeriods;
+
+            // PDF Header
+            doc.setFontSize(20);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[CHART] ANALISI TIMELINE VENDITE'), 105, 20, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(cleanText(`Data Generazione: ${currentDate}`), 20, 30);
+            doc.text(cleanText(`Modalita\' Calcolo: Percentuali ${modeText}`), 20, 36);
+            doc.text(cleanText(`Periodi Analizzati: ${periods.length} (da ${periods[0]} a ${periods[periods.length - 1]})`), 20, 42);
+
+            let currentY = 58;
+
+            // Summary Statistics
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[TREND_UP] RIEPILOGO TIMELINE'), 20, currentY);
+            currentY += 10;
+
+            // Calculate timeline totals
+            let totalSalesAllPeriods = 0;
+            let totalCommissionAllPeriods = 0;
+            pivotData.forEach(shop => {
+                totalSalesAllPeriods += shop.totalSales;
+                periods.forEach(periodo => {
+                    totalCommissionAllPeriods += shop.data[periodo].commission;
+                });
+            });
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text(cleanText(`Negozi Analizzati: ${pivotData.length}`), 20, currentY + 6);
+            doc.text(cleanText(`Vendite Cumulative: EUR ${totalSalesAllPeriods.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 20, currentY + 12);
+            doc.text(cleanText(`Provvigioni Cumulative: EUR ${totalCommissionAllPeriods.toLocaleString('it-IT', {minimumFractionDigits: 2})}`), 20, currentY + 18);
+
+            // Line separator
+            doc.setLineWidth(0.5);
+            doc.line(20, currentY + 30, 190, currentY + 30);
+            currentY += 40;
+
+            // Timeline table for shops
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(cleanText('[SHOP] ANDAMENTO TEMPORALE PER NEGOZIO'), 20, currentY);
+            currentY += 10;
+
+            // Create timeline table with growth percentages
+            const timelineTableData = [];
+            pivotData.forEach(shop => {
+                const shopDisplayName = getShopDisplayName(shop.shop);
+
+                // Get first and last period data for overall growth
+                const firstPeriod = periods[0];
+                const lastPeriod = periods[periods.length - 1];
+                const firstSales = shop.data[firstPeriod].sales;
+                const lastSales = shop.data[lastPeriod].sales;
+                const overallGrowth = firstSales > 0 ? ((lastSales - firstSales) / firstSales) * 100 : 0;
+                const trendIcon = overallGrowth >= 0 ? '[TREND_UP]' : '[TREND_DOWN]';
+
+                timelineTableData.push([
+                    cleanText(shopDisplayName),
+                    `EUR ${firstSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    `EUR ${lastSales.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    cleanText(`${trendIcon} ${overallGrowth > 0 ? '+' : ''}${overallGrowth.toFixed(1)}%`),
+                    `EUR ${shop.data[firstPeriod].commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}`,
+                    `EUR ${shop.data[lastPeriod].commission.toLocaleString('it-IT', {minimumFractionDigits: 2})}`
+                ]);
+            });
+
+            // Add timeline table
+            doc.autoTable({
+                startY: currentY,
+                head: [[
+                    'Negozio',
+                    `Vendite Inizio (${periods[0]})`,
+                    `Vendite Fine (${periods[periods.length - 1]})`,
+                    'Crescita Totale',
+                    'Prov. Inizio',
+                    'Prov. Fine'
+                ]],
+                body: timelineTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [76, 175, 80],
+                    textColor: [255, 255, 255],
+                    fontSize: 9,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                columnStyles: {
+                    0: { cellWidth: 32 },
+                    1: { halign: 'right', cellWidth: 28 },
+                    2: { halign: 'right', cellWidth: 28 },
+                    3: { halign: 'center', cellWidth: 26 },
+                    4: { halign: 'right', cellWidth: 24 },
+                    5: { halign: 'right', cellWidth: 24 }
+                },
+                margin: { left: 20, right: 20 },
+                willDrawCell: function (data) {
+                    // Color code growth cells - RED FOR NEGATIVE!
+                    if (data.section === 'body' && data.column.index === 3) {
+                        const cellText = data.cell.text[0] || '';
+                        if (cellText.includes('[TREND_UP]')) {
+                            data.cell.styles.textColor = [34, 139, 34]; // Dark green
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (cellText.includes('[TREND_DOWN]')) {
+                            data.cell.styles.textColor = [220, 20, 60]; // RED for negative
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                }
+            });
+
+            currentY = doc.lastAutoTable.finalY + 15;
+
+            // Add prediction alerts if available
+            if (typeof generatePredictionAlerts === 'function') {
+                const predictionAlerts = generatePredictionAlerts();
+                if (predictionAlerts.length > 0) {
+                    if (currentY > 220) {
+                        doc.addPage();
+                        currentY = 20;
+                    }
+
+                    doc.setFontSize(14);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(cleanText('[STAR] ALERT PREDIZIONI'), 20, currentY);
+                    currentY += 10;
+
+                    doc.setFontSize(9);
+                    doc.setFont(undefined, 'normal');
+
+                    predictionAlerts.slice(0, 8).forEach(alert => {
+                        const shopName = getShopDisplayName(alert.shop);
+                        const alertText = cleanText(`• ${shopName}: ${alert.title} - ${alert.message}`);
+                        doc.text(alertText, 20, currentY);
+                        currentY += 6;
+                    });
+                }
+            }
+
+            // Generate filename
+            const startPeriod = periods[0].replace('-', '');
+            const endPeriod = periods[periods.length - 1].replace('-', '');
+            const filename = `timeline-vendite-${startPeriod}-${endPeriod}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+            // Save the PDF
+            doc.save(filename);
+
+            // Show success message
+            setTimeout(() => {
+                alert(`Report Timeline PDF generato con successo!\n\nFile: ${filename}\n\nPeriodi inclusi: ${periods.length}\nRange: ${periods[0]} - ${periods[periods.length - 1]}\nVendite totali: EUR ${totalSalesAllPeriods.toLocaleString('it-IT')}`);
             }, 500);
         }
     </script>
