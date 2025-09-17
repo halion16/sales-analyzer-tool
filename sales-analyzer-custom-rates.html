@@ -814,6 +814,81 @@
             transform: translateY(-2px);
             transition: transform 0.2s ease;
         }
+
+        /* Admin Settings Panel */
+        .admin-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        .admin-panel h3 {
+            margin: 0 0 12px 0;
+            color: #495057;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .admin-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .threshold-input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 5px 10px;
+        }
+
+        .threshold-input {
+            border: none;
+            outline: none;
+            width: 50px;
+            text-align: center;
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        .preview-info {
+            font-size: 12px;
+            color: #6c757d;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+
+        .admin-actions {
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-apply {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -1003,6 +1078,25 @@
                 <div class="control-group">
                     <label>&nbsp;</label>
                     <button class="btn" onclick="processData()">🔄 Calcola Risultati</button>
+                </div>
+
+                <!-- Admin Settings Panel -->
+                <div class="admin-panel">
+                    <h3>⚙️ Impostazioni Alert - Negozi in Difficoltà</h3>
+                    <div class="admin-controls">
+                        <div class="threshold-input-group">
+                            <span style="font-size: 12px; color: #666;">Soglia calo:</span>
+                            <input type="number" id="problemThreshold" class="threshold-input" value="20" min="5" max="50" step="1" oninput="updateThresholdPreview()" />
+                            <span style="font-size: 12px; color: #666;">%</span>
+                        </div>
+                        <div class="preview-info" id="thresholdPreview">
+                            Anteprima: negozi con calo > 20%
+                        </div>
+                        <div class="admin-actions">
+                            <button class="btn-small btn-apply" onclick="applyThresholdSettings()">✅ Applica</button>
+                            <button class="btn-small btn-reset" onclick="resetThresholdSettings()">🔄 Reset</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2443,8 +2537,9 @@
                 if (currentData && lastYearData && lastYearData.sales > 1000) {
                     const shopYoY = ((currentData.sales - lastYearData.sales) / lastYearData.sales) * 100;
 
-                    // Flag real problems (not seasonal noise)
-                    if (shopYoY < -20) {
+                    // Flag real problems using configurable threshold
+                    const problemThreshold = getProblemShopsThreshold();
+                    if (shopYoY < -problemThreshold) {
                         metrics.problemShops.push({
                             shop: shop.shop,
                             yoyChange: shopYoY,
@@ -3262,7 +3357,7 @@
                     <div class="stat-card clickable-alert" style="background: linear-gradient(135deg, #dc3545, #e74c3c); cursor: pointer;" onclick="showProblemShopsPopover(this)">
                         <div class="stat-value">⚠️ ${simpleMetrics.problemShops.length}</div>
                         <div class="stat-label">Negozi in Difficoltà</div>
-                        <div class="tooltip">Clicca per vedere l'elenco dei negozi con calo >20% rispetto anno scorso</div>
+                        <div class="tooltip">Clicca per vedere l'elenco dei negozi con calo >${getProblemShopsThreshold()}% rispetto anno scorso</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${totalShops}</div>
@@ -4788,6 +4883,67 @@
                 popover.remove();
             }
         }
+
+        // Admin Settings - Problem Shops Threshold Management
+        function getProblemShopsThreshold() {
+            const stored = localStorage.getItem('problemShopsThreshold');
+            return stored ? parseInt(stored) : 20; // default 20%
+        }
+
+        function setProblemShopsThreshold(threshold) {
+            localStorage.setItem('problemShopsThreshold', threshold.toString());
+        }
+
+        function updateThresholdPreview() {
+            const threshold = document.getElementById('problemThreshold').value;
+            const preview = document.getElementById('thresholdPreview');
+
+            // Count how many shops would be affected with this threshold
+            let affectedCount = 0;
+            if (window.problemShopsData) {
+                affectedCount = window.problemShopsData.filter(shop => shop.yoyChange <= -threshold).length;
+            }
+
+            preview.textContent = `Anteprima: negozi con calo > ${threshold}% (${affectedCount} negozi interessati)`;
+        }
+
+        function applyThresholdSettings() {
+            const threshold = parseInt(document.getElementById('problemThreshold').value);
+
+            if (threshold < 5 || threshold > 50) {
+                alert('⚠️ La soglia deve essere tra 5% e 50%');
+                return;
+            }
+
+            setProblemShopsThreshold(threshold);
+
+            // Show confirmation and auto-update if data is loaded
+            const confirmMsg = `✅ Soglia aggiornata a ${threshold}%\n\nVuoi ricalcolare i risultati immediatamente?`;
+            if (pivotData.length > 0 && confirm(confirmMsg)) {
+                processData();
+            } else {
+                alert(`✅ Soglia salvata: ${threshold}%\n\nI nuovi valori saranno applicati al prossimo calcolo.`);
+            }
+        }
+
+        function resetThresholdSettings() {
+            document.getElementById('problemThreshold').value = 20;
+            setProblemShopsThreshold(20);
+            updateThresholdPreview();
+            alert('🔄 Soglia ripristinata al valore predefinito (20%)');
+        }
+
+        // Initialize admin settings on page load
+        function initializeAdminSettings() {
+            const savedThreshold = getProblemShopsThreshold();
+            document.getElementById('problemThreshold').value = savedThreshold;
+            updateThresholdPreview();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAdminSettings();
+        });
     </script>
 </body>
 </html>
