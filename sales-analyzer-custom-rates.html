@@ -744,6 +744,76 @@
                 margin-bottom: 2px;
             }
         }
+
+        /* Problem Shops Popover */
+        .problem-shops-popover {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            max-width: 400px;
+            max-height: 400px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .popover-header {
+            background: #dc3545;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .popover-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .popover-content {
+            max-height: 350px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .problem-shop-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 4px solid #dc3545;
+        }
+
+        .problem-shop-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .problem-shop-change {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .problem-shop-values {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .clickable-alert:hover {
+            transform: translateY(-2px);
+            transition: transform 0.2s ease;
+        }
     </style>
 </head>
 <body>
@@ -2374,7 +2444,7 @@
                     const shopYoY = ((currentData.sales - lastYearData.sales) / lastYearData.sales) * 100;
 
                     // Flag real problems (not seasonal noise)
-                    if (shopYoY < -40) {
+                    if (shopYoY < -20) {
                         metrics.problemShops.push({
                             shop: shop.shop,
                             yoyChange: shopYoY,
@@ -3189,46 +3259,30 @@
                         <div class="stat-label">vs Benchmark Storico</div>
                         <div class="tooltip">Confronto con mediana degli ultimi ${simpleMetrics.seasonalBenchmark?.dataPoints || 0} anni stesso mese. Range normale: €${simpleMetrics.seasonalBenchmark ? (simpleMetrics.seasonalBenchmark.range[0]/1000).toFixed(0) : '0'}K - €${simpleMetrics.seasonalBenchmark ? (simpleMetrics.seasonalBenchmark.range[1]/1000).toFixed(0) : '0'}K</div>
                     </div>
-                    <div class="stat-card" style="background: linear-gradient(135deg, #dc3545, #e74c3c);">
+                    <div class="stat-card clickable-alert" style="background: linear-gradient(135deg, #dc3545, #e74c3c); cursor: pointer;" onclick="showProblemShopsPopover(this)">
                         <div class="stat-value">⚠️ ${simpleMetrics.problemShops.length}</div>
                         <div class="stat-label">Negozi in Difficoltà</div>
-                        <div class="tooltip">Negozi con calo >40% rispetto anno scorso - questi richiedono attenzione immediata</div>
+                        <div class="tooltip">Clicca per vedere l'elenco dei negozi con calo >20% rispetto anno scorso</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${totalShops}</div>
                         <div class="stat-label">Negozi Totali</div>
                         <div class="tooltip">Numero di negozi analizzati</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${getShopDisplayName(simpleMetrics.topGrowingShop?.shop || '')}</div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                        <div class="stat-value">🏆 ${getShopDisplayName(simpleMetrics.topGrowingShop?.shop || '')}</div>
                         <div class="stat-label">Top Crescita: ${simpleMetrics.topGrowingShop ? '+' + simpleMetrics.topGrowingShop.yoyChange.toFixed(0) + '%' : 'N/A'}</div>
                         <div class="tooltip">Negozio con maggiore crescita anno su anno</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${getShopDisplayName(simpleMetrics.topDecliningShop?.shop || '')}</div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #dc3545, #e74c3c);">
+                        <div class="stat-value">⚠️ ${getShopDisplayName(simpleMetrics.topDecliningShop?.shop || '')}</div>
                         <div class="stat-label">Maggiore Calo: ${simpleMetrics.topDecliningShop ? simpleMetrics.topDecliningShop.yoyChange.toFixed(0) + '%' : 'N/A'}</div>
                         <div class="tooltip">Negozio con maggiore calo anno su anno</div>
                     </div>
                 `;
 
-                // Add REAL problems alerts (not overengineered prediction stuff)
-                if (simpleMetrics.problemShops.length > 0) {
-                    const alertsHtml = `
-                        <div style="margin-top: 20px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px;">
-                            <h3 style="color: #856404; margin: 0 0 10px 0;">⚠️ Negozi che Richiedono Attenzione</h3>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                                ${simpleMetrics.problemShops.map(shop => `
-                                    <div style="background: white; padding: 10px; border-radius: 6px; border-left: 4px solid #dc3545;">
-                                        <strong>${getShopDisplayName(shop.shop)}</strong><br>
-                                        <span style="color: #dc3545;">${shop.yoyChange.toFixed(1)}% vs anno scorso</span><br>
-                                        <small>€${shop.current.toFixed(0)} vs €${shop.lastYear.toFixed(0)}</small>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('stats').innerHTML += alertsHtml;
-                }
+                // Store problem shops data for popover (no longer showing expanded list)
+                window.problemShopsData = simpleMetrics.problemShops;
 
                 // REMOVED: Complex prediction alerts that were useless for seasonal business
                 if (false && allPredictionAlerts.length > 0) {
@@ -4671,6 +4725,68 @@
             setTimeout(() => {
                 alert(`Report Timeline PDF generato con successo!\n\nFile: ${filename}\n\nPeriodi inclusi: ${periods.length}\nRange: ${periods[0]} - ${periods[periods.length - 1]}\nVendite totali: EUR ${totalSalesAllPeriods.toLocaleString('it-IT')}`);
             }, 500);
+        }
+
+        // Problem Shops Popover functionality
+        function showProblemShopsPopover(cardElement) {
+            // Remove any existing popover
+            const existingPopover = document.querySelector('.problem-shops-popover');
+            if (existingPopover) {
+                existingPopover.remove();
+            }
+
+            if (!window.problemShopsData || window.problemShopsData.length === 0) {
+                alert('Nessun negozio in difficoltà da mostrare');
+                return;
+            }
+
+            // Create popover element
+            const popover = document.createElement('div');
+            popover.className = 'problem-shops-popover';
+
+            // Get card position for popover positioning
+            const cardRect = cardElement.getBoundingClientRect();
+
+            popover.innerHTML = `
+                <div class="popover-header">
+                    <span>⚠️ Negozi in Difficoltà (${window.problemShopsData.length})</span>
+                    <button class="popover-close" onclick="closeProblemShopsPopover()">&times;</button>
+                </div>
+                <div class="popover-content">
+                    ${window.problemShopsData.map(shop => `
+                        <div class="problem-shop-item">
+                            <div class="problem-shop-name">${getShopDisplayName(shop.shop)}</div>
+                            <div class="problem-shop-change">${shop.yoyChange.toFixed(1)}% vs anno scorso</div>
+                            <div class="problem-shop-values">€${shop.current.toLocaleString('it-IT')} vs €${shop.lastYear.toLocaleString('it-IT')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Position popover
+            popover.style.left = (cardRect.left + window.scrollX) + 'px';
+            popover.style.top = (cardRect.bottom + window.scrollY + 5) + 'px';
+            popover.style.display = 'block';
+
+            // Add to document
+            document.body.appendChild(popover);
+
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('click', function closeOnOutsideClick(e) {
+                    if (!popover.contains(e.target) && !cardElement.contains(e.target)) {
+                        closeProblemShopsPopover();
+                        document.removeEventListener('click', closeOnOutsideClick);
+                    }
+                });
+            }, 100);
+        }
+
+        function closeProblemShopsPopover() {
+            const popover = document.querySelector('.problem-shops-popover');
+            if (popover) {
+                popover.remove();
+            }
         }
     </script>
 </body>
