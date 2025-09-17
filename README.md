@@ -451,6 +451,6 @@ Le predizioni e analisi fornite sono basate su algoritmi statistici e devono ess
 
 ---
 
-**📊 Sales Analyzer** - *Powered by Timeline Evolution Technology*
+**📊 Sales Analyzer** - *Powered by LuKas Evolution Technology*
 
 *Ultimo aggiornamento documentazione: Settembre 2024*
