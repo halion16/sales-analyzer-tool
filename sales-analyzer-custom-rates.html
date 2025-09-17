@@ -462,7 +462,7 @@
         /* Timeline Mode Styles */
         .timeline-summary {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             align-items: center;
             justify-content: center;
             flex-wrap: wrap;
@@ -2204,7 +2204,9 @@
                 // Calculate trends
                 const salesValues = periods.map(p => shopTimeline.data[p].sales);
                 const avgGrowth = calculateAverageGrowth(salesValues);
+                const yoyGrowth = calculateShopYearOverYearGrowth(shopTimeline.data, periods);
                 shopTimeline.avgGrowth = avgGrowth;
+                shopTimeline.yoyGrowth = yoyGrowth;
                 shopTimeline.totalSales = salesValues.reduce((sum, val) => sum + val, 0);
 
                 timelineVisualization.push(shopTimeline);
@@ -2249,6 +2251,42 @@
             }
 
             return avgGrowth;
+        }
+
+        // Helper function to calculate year-over-year growth for individual shops
+        function calculateShopYearOverYearGrowth(shopData, periods) {
+            if (!shopData || periods.length < 2) return 0;
+
+            // Get the latest period
+            const latestPeriod = periods[periods.length - 1];
+            const [currentYear, currentMonth] = latestPeriod.split('-');
+            const lastYear = String(parseInt(currentYear) - 1);
+            const sameMonthLastYear = `${lastYear}-${currentMonth}`;
+
+            // Check if we have data for both current and last year same month
+            const currentData = shopData[latestPeriod];
+            const lastYearData = shopData[sameMonthLastYear];
+
+            if (!currentData || !lastYearData || lastYearData.sales <= 0) {
+                // If no same-month comparison available, calculate average YoY across available periods
+                const yoyComparisons = [];
+
+                periods.forEach(period => {
+                    const [year, month] = period.split('-');
+                    const previousYearPeriod = `${parseInt(year) - 1}-${month}`;
+
+                    if (shopData[period] && shopData[previousYearPeriod] && shopData[previousYearPeriod].sales > 0) {
+                        const yoy = ((shopData[period].sales - shopData[previousYearPeriod].sales) / shopData[previousYearPeriod].sales) * 100;
+                        yoyComparisons.push(yoy);
+                    }
+                });
+
+                return yoyComparisons.length > 0 ?
+                    yoyComparisons.reduce((sum, growth) => sum + growth, 0) / yoyComparisons.length : 0;
+            }
+
+            // Calculate YoY for same month
+            return ((currentData.sales - lastYearData.sales) / lastYearData.sales) * 100;
         }
 
         // Calculate SIMPLE and USEFUL metrics (replacing complex overengineered stuff)
@@ -3534,6 +3572,12 @@
                                         ${avgGrowthIcon} ${shop.avgGrowth > 0 ? '+' : ''}${shop.avgGrowth.toFixed(1)}%
                                     </div>
                                     <div class="timeline-label">Crescita Media</div>
+                                </div>
+                                <div class="timeline-trend">
+                                    <div class="trend-indicator" style="color: ${shop.yoyGrowth >= 0 ? '#28a745' : '#dc3545'};">
+                                        ${shop.yoyGrowth >= 0 ? '📊' : '📉'} ${shop.yoyGrowth > 0 ? '+' : ''}${shop.yoyGrowth.toFixed(1)}%
+                                    </div>
+                                    <div class="timeline-label">Trend YoY</div>
                                 </div>
                                 <div class="expand-icon">▶</div>
                             </div>
