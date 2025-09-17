@@ -3610,6 +3610,7 @@
                                         <th>👥 Operatori</th>
                                         <th>🔢 Transazioni</th>
                                         <th>📈 Crescita vs Prec.</th>
+                                        <th>📊 Trend YoY</th>
                                     </tr>
                                 </thead>
                                 <tbody>`;
@@ -3635,6 +3636,20 @@
                         }
                     }
 
+                    // Calculate YoY growth for this specific period
+                    let yoyGrowth = 0;
+                    let yoyDisplay = '-';
+                    const [currentYear, currentMonth] = periodo.split('-');
+                    const lastYear = String(parseInt(currentYear) - 1);
+                    const sameMonthLastYear = `${lastYear}-${currentMonth}`;
+
+                    if (shop.data[sameMonthLastYear] && shop.data[sameMonthLastYear].sales > 0) {
+                        yoyGrowth = ((data.sales - shop.data[sameMonthLastYear].sales) / shop.data[sameMonthLastYear].sales) * 100;
+                        const yoyIcon = yoyGrowth >= 0 ? '📊' : '📉';
+                        const yoyColor = yoyGrowth >= 0 ? '#28a745' : '#dc3545';
+                        yoyDisplay = `<span style="color: ${yoyColor}; font-weight: bold;">${yoyIcon} ${yoyGrowth > 0 ? '+' : ''}${yoyGrowth.toFixed(1)}%</span>`;
+                    }
+
                     html += `
                         <tr ${data.sales === 0 ? 'style="opacity: 0.6;"' : ''}>
                             <td class="text-center"><strong>${monthName} ${year}</strong></td>
@@ -3643,6 +3658,7 @@
                             <td class="text-center">${data.operators}</td>
                             <td class="text-center">${data.transactions}</td>
                             <td class="text-center">${growthDisplay}</td>
+                            <td class="text-center">${yoyDisplay}</td>
                         </tr>
                     `;
                 });
